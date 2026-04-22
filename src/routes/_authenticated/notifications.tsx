@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { formatRelativeDay } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/notifications")({
-  head: () => ({ meta: [{ title: "Notifications — Pitchside" }] }),
+  head: () => ({ meta: [{ title: "Notifications — Sixxer" }] }),
   component: NotificationsPage,
 });
 

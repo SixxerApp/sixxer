@@ -7,7 +7,7 @@ import { dateBlock, formatMoney, formatRelativeDay, formatTime } from "@/lib/for
 import { InitialAvatar } from "@/components/Avatar";
 
 export const Route = createFileRoute("/_authenticated/home")({
-  head: () => ({ meta: [{ title: "Home — Pitchside" }] }),
+  head: () => ({ meta: [{ title: "Home — Sixxer" }] }),
   component: HomePage,
 });
 

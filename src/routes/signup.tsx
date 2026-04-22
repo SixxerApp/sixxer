@@ -16,8 +16,8 @@ const signupSchema = z.object({
 export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
-      { title: "Create account — Pitchside" },
-      { name: "description", content: "Create your Pitchside account to manage your cricket club." },
+      { title: "Create account — Sixxer" },
+      { name: "description", content: "Create your Sixxer account to manage your cricket club." },
     ],
   }),
   component: SignupPage,
@@ -60,9 +60,9 @@ function SignupPage() {
       <div className="w-full max-w-sm">
         <Link to="/" className="mb-8 flex items-center justify-center gap-2">
           <span className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground font-extrabold">
-            P
+            S
           </span>
-          <span className="text-xl font-bold tracking-tight">Pitchside</span>
+          <span className="text-xl font-bold tracking-tight">Sixxer</span>
         </Link>
 
         <div className="rounded-3xl border border-border bg-card p-6 shadow-xl">

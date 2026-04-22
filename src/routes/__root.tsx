@@ -33,14 +33,14 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#19161f" },
-      { title: "Pitchside — Cricket team management" },
+      { title: "Sixxer — Cricket team management" },
       {
         name: "description",
         content:
           "One place for clubs and players to manage fixtures, RSVPs, payments, and team chat. Built for cricket.",
       },
-      { name: "author", content: "Pitchside" },
-      { property: "og:title", content: "Pitchside — Cricket team management" },
+      { name: "author", content: "Sixxer" },
+      { property: "og:title", content: "Sixxer — Cricket team management" },
       {
         property: "og:description",
         content:

@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { colorFromString } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/groups")({
-  head: () => ({ meta: [{ title: "Groups — Pitchside" }] }),
+  head: () => ({ meta: [{ title: "Groups — Sixxer" }] }),
   component: GroupsPage,
 });
 

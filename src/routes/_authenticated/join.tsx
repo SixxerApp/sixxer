@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/join")({
-  head: () => ({ meta: [{ title: "Join with code — Pitchside" }] }),
+  head: () => ({ meta: [{ title: "Join with code — Sixxer" }] }),
   component: JoinPage,
 });
 

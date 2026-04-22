@@ -7,7 +7,7 @@ import { colorFromString } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/groups/$teamId")({
-  head: () => ({ meta: [{ title: "Team — Pitchside" }] }),
+  head: () => ({ meta: [{ title: "Team — Sixxer" }] }),
   component: TeamLayout,
 });
 
@@ -34,7 +34,7 @@ function TeamLayout() {
   }, [teamId]);
 
   // Local favorites (per-user, in localStorage)
-  const favKey = user ? `pitchside.favorites.${user.id}` : null;
+  const favKey = user ? `sixxer.favorites.${user.id}` : null;
   const [isFav, setIsFav] = React.useState(false);
   React.useEffect(() => {
     if (!favKey) return;
@@ -95,7 +95,7 @@ function TeamLayout() {
           background: `radial-gradient(140% 90% at 50% 100%, ${heroColor} 0%, oklch(0.18 0.02 270) 75%)`,
         }}
       >
-        {/* faint diagonal sheen, like Spond */}
+        {/* faint diagonal sheen */}
         <div
           className="pointer-events-none absolute inset-0 opacity-30 mix-blend-overlay"
           style={{

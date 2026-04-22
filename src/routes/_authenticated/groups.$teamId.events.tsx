@@ -114,7 +114,7 @@ function EventsTab() {
 
   return (
     <div>
-      {/* Filter — Spond-style label + dropdown-looking pill */}
+      {/* Filter */}
       <div className="mb-4 flex items-center justify-end">
         <button
           onClick={() => setFilter(filter === "upcoming" ? "past" : "upcoming")}

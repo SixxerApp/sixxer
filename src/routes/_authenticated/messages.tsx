@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { MessageCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/messages")({
-  head: () => ({ meta: [{ title: "Chat — Pitchside" }] }),
+  head: () => ({ meta: [{ title: "Chat — Sixxer" }] }),
   component: MessagesPage,
 });
 

@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/PageHeader";
 const schema = z.object({ teamName: z.string().trim().min(2).max(80) });
 
 export const Route = createFileRoute("/_authenticated/clubs/$clubId/teams/new")({
-  head: () => ({ meta: [{ title: "Add team — Pitchside" }] }),
+  head: () => ({ meta: [{ title: "Add team — Sixxer" }] }),
   component: NewTeamPage,
 });
 

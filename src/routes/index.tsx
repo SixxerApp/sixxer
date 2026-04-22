@@ -5,13 +5,13 @@ import { useAuth } from "@/lib/auth";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Pitchside — Cricket team management for clubs & players" },
+      { title: "Sixxer — Cricket team management for clubs & players" },
       {
         name: "description",
         content:
-          "Pitchside helps cricket clubs run fixtures, collect match fees, track availability, and keep every player in the loop.",
+          "Sixxer helps cricket clubs run fixtures, collect match fees, track availability, and keep every player in the loop.",
       },
-      { property: "og:title", content: "Pitchside — Cricket team management" },
+      { property: "og:title", content: "Sixxer — Cricket team management" },
       {
         property: "og:description",
         content:
@@ -32,9 +32,9 @@ function Landing() {
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5">
         <div className="flex items-center gap-2">
           <span className="grid h-9 w-9 place-items-center rounded-2xl bg-primary text-primary-foreground font-extrabold">
-            P
+            S
           </span>
-          <span className="text-lg font-bold tracking-tight">Pitchside</span>
+          <span className="text-lg font-bold tracking-tight">Sixxer</span>
         </div>
         <nav className="flex items-center gap-2 sm:gap-3">
           <Link
@@ -68,7 +68,7 @@ function Landing() {
             Run your club. <span className="text-primary">Play more cricket.</span>
           </h1>
           <p className="mt-5 max-w-2xl text-balance text-base text-muted-foreground sm:text-lg">
-            Fixtures, availability, match fees, and team updates — all in one place. Pitchside
+            Fixtures, availability, match fees, and team updates — all in one place. Sixxer
             saves admins hours every week and keeps every player in the loop.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -117,7 +117,7 @@ function Landing() {
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-6 text-xs text-muted-foreground sm:flex-row">
-          <span>© {new Date().getFullYear()} Pitchside</span>
+          <span>© {new Date().getFullYear()} Sixxer</span>
           <span>Made for cricket. Designed for every club.</span>
         </div>
       </footer>

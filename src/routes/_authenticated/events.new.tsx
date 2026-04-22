@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/events/new")({
   validateSearch: (s: Record<string, unknown>) => ({ teamId: String(s.teamId ?? "") }),
-  head: () => ({ meta: [{ title: "New event — Pitchside" }] }),
+  head: () => ({ meta: [{ title: "New event — Sixxer" }] }),
   component: NewEventPage,
 });
 

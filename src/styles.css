@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Cricket Team Management — Spond-inspired design system.
+ * Cricket team management design system.
  * Dark-first, with vivid pink/coral accent on near-black surfaces.
  * All colors in oklch.
  */
@@ -94,7 +94,7 @@
   --ring: oklch(0.66 0.22 5);
 }
 
-/* Dark theme — default Spond-like deep slate */
+/* Dark theme */
 .dark {
   --background: oklch(0.16 0.015 270);
   --foreground: oklch(0.97 0.005 270);

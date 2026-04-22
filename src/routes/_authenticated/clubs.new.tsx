@@ -17,7 +17,7 @@ const schema = z.object({
 });
 
 export const Route = createFileRoute("/_authenticated/clubs/new")({
-  head: () => ({ meta: [{ title: "Create club — Pitchside" }] }),
+  head: () => ({ meta: [{ title: "Create club — Sixxer" }] }),
   component: NewClubPage,
 });
 
