@@ -5,21 +5,20 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Cricket team management design system.
- * Dark-first, with vivid pink/coral accent on near-black surfaces.
- * All colors in oklch.
+ * Sixxer design system.
+ * Athletic Minimalist: dark-first, teal-led, mobile-first, fast to scan.
  */
 
 @theme inline {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-md: calc(var(--radius) + 4px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  --radius-xl: calc(var(--radius) + 8px);
+  --radius-2xl: calc(var(--radius) + 16px);
+  --radius-3xl: calc(var(--radius) + 24px);
+  --radius-4xl: calc(var(--radius) + 32px);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -48,91 +47,102 @@
   --color-ring-offset-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-elevated: var(--surface-elevated);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
 }
 
 /* Light theme */
 :root {
-  --radius: 0.875rem;
+  --radius: 1rem;
 
-  --background: oklch(0.985 0.003 70);
-  --foreground: oklch(0.18 0.02 270);
+  --background: #f4f8f7;
+  --foreground: #102022;
 
-  --surface: oklch(1 0 0);
-  --surface-elevated: oklch(1 0 0);
+  --surface: #ffffff;
+  --surface-elevated: #eef4f3;
+  --surface-container-low: #ffffff;
+  --surface-container: #edf2f2;
+  --surface-container-high: #e1e8e7;
+  --surface-container-highest: #d4dcdb;
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 270);
+  --card: #ffffff;
+  --card-foreground: #102022;
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 270);
+  --popover: #ffffff;
+  --popover-foreground: #102022;
 
-  /* Cricket pink/coral accent */
-  --primary: oklch(0.66 0.22 5);
-  --primary-foreground: oklch(0.99 0.005 0);
-  --primary-glow: oklch(0.74 0.2 10);
+  --primary: #006a6a;
+  --primary-foreground: #eefefe;
+  --primary-glow: #75f6f6;
 
-  --secondary: oklch(0.96 0.01 270);
-  --secondary-foreground: oklch(0.22 0.02 270);
+  --secondary: #d2e7e6;
+  --secondary-foreground: #173f3f;
 
-  --muted: oklch(0.96 0.005 270);
-  --muted-foreground: oklch(0.5 0.02 270);
+  --muted: #edf2f2;
+  --muted-foreground: #506162;
 
-  --accent: oklch(0.95 0.02 5);
-  --accent-foreground: oklch(0.3 0.1 5);
+  --accent: #d7f1f1;
+  --accent-foreground: #104f50;
 
-  --destructive: oklch(0.6 0.22 25);
-  --destructive-foreground: oklch(0.99 0.005 0);
+  --destructive: #ba4d43;
+  --destructive-foreground: #fff5f4;
 
-  --success: oklch(0.65 0.16 155);
-  --success-foreground: oklch(0.99 0.005 0);
+  --success: #0bb0b0;
+  --success-foreground: #003737;
 
-  --warning: oklch(0.78 0.16 75);
-  --warning-foreground: oklch(0.2 0.05 75);
+  --warning: #e68651;
+  --warning-foreground: #341100;
 
-  --border: oklch(0.92 0.005 270);
-  --input: oklch(0.92 0.005 270);
-  --ring: oklch(0.66 0.22 5);
+  --border: #b8c6c5;
+  --input: #c8d3d3;
+  --ring: #006a6a;
 }
 
 /* Dark theme */
 .dark {
-  --background: oklch(0.16 0.015 270);
-  --foreground: oklch(0.97 0.005 270);
+  --background: #0f1415;
+  --foreground: #dee4e3;
 
-  --surface: oklch(0.21 0.018 270);
-  --surface-elevated: oklch(0.25 0.02 270);
+  --surface: #0f1415;
+  --surface-elevated: #171d1d;
+  --surface-container-low: #171d1d;
+  --surface-container: #1b2121;
+  --surface-container-high: #252b2b;
+  --surface-container-highest: #303636;
 
-  --card: oklch(0.21 0.018 270);
-  --card-foreground: oklch(0.97 0.005 270);
+  --card: #1b2121;
+  --card-foreground: #dee4e3;
 
-  --popover: oklch(0.21 0.018 270);
-  --popover-foreground: oklch(0.97 0.005 270);
+  --popover: #1b2121;
+  --popover-foreground: #dee4e3;
 
-  --primary: oklch(0.7 0.22 5);
-  --primary-foreground: oklch(0.15 0.02 270);
-  --primary-glow: oklch(0.78 0.2 10);
+  --primary: #54d9d9;
+  --primary-foreground: #003737;
+  --primary-glow: #75f6f6;
 
-  --secondary: oklch(0.27 0.02 270);
-  --secondary-foreground: oklch(0.97 0.005 270);
+  --secondary: #204e4d;
+  --secondary-foreground: #a1cfce;
 
-  --muted: oklch(0.25 0.018 270);
-  --muted-foreground: oklch(0.7 0.015 270);
+  --muted: #171d1d;
+  --muted-foreground: #bbc9c8;
 
-  --accent: oklch(0.32 0.06 5);
-  --accent-foreground: oklch(0.97 0.005 270);
+  --accent: #204e4d;
+  --accent-foreground: #bdebea;
 
-  --destructive: oklch(0.65 0.22 25);
-  --destructive-foreground: oklch(0.99 0.005 0);
+  --destructive: #d56c62;
+  --destructive-foreground: #2d0b06;
 
-  --success: oklch(0.7 0.16 155);
-  --success-foreground: oklch(0.15 0.02 155);
+  --success: #0bb0b0;
+  --success-foreground: #003c3c;
 
-  --warning: oklch(0.78 0.16 75);
-  --warning-foreground: oklch(0.2 0.05 75);
+  --warning: #e68651;
+  --warning-foreground: #5d2500;
 
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.7 0.22 5);
+  --border: #3c4949;
+  --input: #303636;
+  --ring: #54d9d9;
 }
 
 @layer base {
@@ -140,12 +150,26 @@
     border-color: var(--color-border);
   }
 
-  html, body {
+  html,
+  body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-image:
+      radial-gradient(circle at top, rgb(84 217 217 / 0.12), transparent 30%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.02), transparent 18rem);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.02em;
   }
 
   /* Reserve space for the bottom tab bar on mobile */
