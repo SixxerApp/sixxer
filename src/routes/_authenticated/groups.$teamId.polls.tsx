@@ -1,22 +1,38 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { BarChart3, Plus, Vote } from "lucide-react";
+import { BarChart3, CalendarCheck2, Lock, Plus, Share2, Vote } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
-import { formatRelativeDay } from "@/lib/format";
+import { formatDate, formatRelativeDay } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 import { useTeamContext } from "@/lib/team-context";
 import { useTeamPolls } from "@/features/polls/use-team-polls";
+import { buildPollShareText, whatsAppShareUrl } from "@/lib/share";
 
 export const Route = createFileRoute("/_authenticated/groups/$teamId/polls")({
   component: PollsTab,
 });
 
+// Next N weekend dates (Sat + Sun) from today, formatted as human labels
+// ready to drop into poll options. We use this to seed an availability check
+// so admins don't have to type "Sat Apr 25" by hand.
+function nextWeekendDates(count: number): string[] {
+  const out: string[] = [];
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  while (out.length < count) {
+    cursor.setDate(cursor.getDate() + 1);
+    const day = cursor.getDay();
+    if (day === 0 || day === 6) out.push(formatDate(cursor));
+  }
+  return out;
+}
+
 function PollsTab() {
   const { teamId } = useParams({ from: "/_authenticated/groups/$teamId/polls" });
   const { user } = useAuth();
   const { data: ctx } = useTeamContext(teamId, user?.id);
-  const { polls, loading, busy, createPoll, vote } = useTeamPolls(teamId, user?.id);
+  const { polls, loading, busy, createPoll, vote, closePoll } = useTeamPolls(teamId, user?.id);
   const [question, setQuestion] = React.useState("");
   const [options, setOptions] = React.useState(["", ""]);
   const [showComposer, setShowComposer] = React.useState(false);
@@ -27,6 +43,12 @@ function PollsTab() {
 
   function addOption() {
     setOptions((current) => (current.length >= 4 ? current : [...current, ""]));
+  }
+
+  function applyAvailabilityPreset() {
+    setQuestion("Who's available this weekend?");
+    setOptions(nextWeekendDates(3));
+    setShowComposer(true);
   }
 
   async function handleCreatePoll(event: React.FormEvent) {
@@ -64,16 +86,48 @@ function PollsTab() {
     toast.success("Vote saved");
   }
 
+  async function handleClose(pollId: string) {
+    // Plain window.confirm is fine for web; the native shell can replace it
+    // when we ship Capacitor builds if we want a nicer prompt.
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm("Close this poll now? Voting will stop for everyone.");
+      if (!confirmed) return;
+    }
+    const { error } = await closePoll(pollId);
+    if (error) toast.error(error.message);
+    else toast.success("Poll closed");
+  }
+
+  function handleShare(poll: (typeof polls)[number]) {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const text = buildPollShareText({
+      question: poll.question,
+      options: poll.options.map((option) => option.label),
+      url: `${origin}/groups/${teamId}/polls`,
+      closesAt: poll.is_closed ? null : poll.closes_at,
+    });
+    if (typeof window !== "undefined") {
+      window.open(whatsAppShareUrl(text), "_blank", "noopener,noreferrer");
+    }
+  }
+
   return (
     <div>
       {ctx?.isMember && (
-        <div className="mb-4">
+        <div className="mb-4 flex flex-wrap gap-2">
           <button
             onClick={() => setShowComposer((current) => !current)}
             className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground"
           >
             <Plus className="h-4 w-4" />
             Create poll
+          </button>
+          <button
+            onClick={applyAvailabilityPreset}
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-semibold"
+          >
+            <CalendarCheck2 className="h-4 w-4" />
+            Availability check
           </button>
         </div>
       )}
@@ -185,9 +239,35 @@ function PollsTab() {
               <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
                 <span className="inline-flex items-center gap-1">
                   <Vote className="h-3.5 w-3.5" />
-                  {poll.my_vote === null ? "You have not voted yet" : "Your vote is counted"}
+                  {poll.is_closed
+                    ? "Closed"
+                    : poll.my_vote === null
+                      ? "You have not voted yet"
+                      : "Your vote is counted"}
                 </span>
-                {poll.closes_at && <span>Closes {formatRelativeDay(poll.closes_at)}</span>}
+                {poll.closes_at && !poll.is_closed && (
+                  <span>Closes {formatRelativeDay(poll.closes_at)}</span>
+                )}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => handleShare(poll)}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-[11px] font-semibold"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  Share
+                </button>
+                {!poll.is_closed && (user?.id === poll.author_id || ctx?.isAdmin) && (
+                  <button
+                    onClick={() => handleClose(poll.id)}
+                    disabled={busy}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-[11px] font-semibold text-muted-foreground"
+                  >
+                    <Lock className="h-3.5 w-3.5" />
+                    Close now
+                  </button>
+                )}
               </div>
             </li>
           ))}

@@ -116,6 +116,22 @@ function HomePage() {
                       <p className="text-xs text-muted-foreground">
                         {e.team_name} · {formatTime(e.starts_at)}
                       </p>
+                      <div className="mt-1.5 flex items-center gap-2 text-[10px] font-semibold">
+                        <span className="inline-flex h-5 items-center gap-0.5 rounded-full border border-success/40 px-1.5 text-success">
+                          ✓ {e.going}
+                        </span>
+                        <span className="inline-flex h-5 items-center gap-0.5 rounded-full border border-warning/50 px-1.5 text-warning-foreground">
+                          ? {e.maybe}
+                        </span>
+                        <span className="inline-flex h-5 items-center gap-0.5 rounded-full border border-destructive/40 px-1.5 text-destructive">
+                          ✗ {e.declined}
+                        </span>
+                        {e.my_status && (
+                          <span className="ml-auto text-[10px] uppercase tracking-wide text-primary">
+                            You: {e.my_status}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </Link>
                 </li>

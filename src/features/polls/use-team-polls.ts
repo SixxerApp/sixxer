@@ -10,6 +10,7 @@ export interface PollOptionResult {
 export interface TeamPoll {
   id: string;
   question: string;
+  author_id: string;
   author_name: string;
   created_at: string;
   closes_at: string | null;
@@ -79,6 +80,7 @@ async function fetchTeamPolls(teamId: string, userId: string | undefined) {
     return {
       id: row.id,
       question: row.question,
+      author_id: row.author_id,
       author_name: authorNames[row.author_id] ?? "Member",
       created_at: row.created_at,
       closes_at: row.closes_at,
@@ -121,16 +123,27 @@ export async function voteOnTeamPoll(pollId: string, userId: string, optionIndex
   );
 }
 
+// Flip closes_at to "now" so the poll stops accepting votes. RLS already
+// restricts this to the poll's author or a club admin.
+export async function closeTeamPoll(pollId: string) {
+  return supabase.from("polls").update({ closes_at: new Date().toISOString() }).eq("id", pollId);
+}
+
 export function useTeamPolls(teamId: string, userId: string | undefined) {
   const [polls, setPolls] = React.useState<TeamPoll[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    setPolls(await fetchTeamPolls(teamId, userId));
-    setLoading(false);
-  }, [teamId, userId]);
+  // Initial load shows skeletons; background refreshes don't — otherwise the
+  // list collapses into placeholders on every vote/close/create round-trip.
+  const load = React.useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true);
+      setPolls(await fetchTeamPolls(teamId, userId));
+      if (!silent) setLoading(false);
+    },
+    [teamId, userId],
+  );
 
   React.useEffect(() => {
     void load();
@@ -143,7 +156,7 @@ export function useTeamPolls(teamId: string, userId: string | undefined) {
       const result = await createTeamPoll({ teamId, userId, question, options, closesAt });
       setBusy(false);
       if (!result.error) {
-        await load();
+        await load(true);
       }
       return result;
     },
@@ -153,16 +166,47 @@ export function useTeamPolls(teamId: string, userId: string | undefined) {
   const vote = React.useCallback(
     async (pollId: string, optionIndex: number) => {
       if (!userId) return { error: new Error("Missing user") };
-      setBusy(true);
+      // Optimistic: update local counts + selected state immediately so the
+      // card doesn't flicker while the write round-trips. If the write fails
+      // the silent refresh below snaps us back to truth.
+      setPolls((current) =>
+        current.map((poll) => {
+          if (poll.id !== pollId) return poll;
+          const previous = poll.my_vote;
+          if (previous === optionIndex) return poll;
+          const options = poll.options.map((option, index) => {
+            let votes = option.votes;
+            if (previous === index) votes = Math.max(0, votes - 1);
+            if (index === optionIndex) votes += 1;
+            return { ...option, votes, selected: index === optionIndex };
+          });
+          return {
+            ...poll,
+            my_vote: optionIndex,
+            total_votes: previous === null ? poll.total_votes + 1 : poll.total_votes,
+            options,
+          };
+        }),
+      );
       const result = await voteOnTeamPoll(pollId, userId, optionIndex);
-      setBusy(false);
-      if (!result.error) {
-        await load();
-      }
+      await load(true);
       return result;
     },
     [load, userId],
   );
 
-  return { polls, loading, busy, createPoll, vote, reload: load };
+  const closePoll = React.useCallback(
+    async (pollId: string) => {
+      setBusy(true);
+      const result = await closeTeamPoll(pollId);
+      setBusy(false);
+      if (!result.error) {
+        await load(true);
+      }
+      return result;
+    },
+    [load],
+  );
+
+  return { polls, loading, busy, createPoll, vote, closePoll, reload: load };
 }

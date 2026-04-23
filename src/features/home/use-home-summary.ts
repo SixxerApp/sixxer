@@ -8,6 +8,10 @@ export interface UpcomingEvent {
   title: string;
   starts_at: string;
   home_away: "home" | "away" | null;
+  going: number;
+  maybe: number;
+  declined: number;
+  my_status: "going" | "maybe" | "declined" | null;
 }
 
 export interface OutstandingPayment {
@@ -69,9 +73,28 @@ async function fetchHomeSummary(userId: string, fallbackName?: string): Promise<
       .order("starts_at", { ascending: true })
       .limit(20);
 
+    const eventIds = (eventRows ?? []).map((event) => event.id);
+    const counts: Record<string, { going: number; maybe: number; declined: number }> = {};
+    const myStatus: Record<string, "going" | "maybe" | "declined"> = {};
+    if (eventIds.length > 0) {
+      const { data: responses } = await supabase
+        .from("event_responses")
+        .select("event_id, user_id, status")
+        .in("event_id", eventIds);
+      for (const response of responses ?? []) {
+        counts[response.event_id] ??= { going: 0, maybe: 0, declined: 0 };
+        counts[response.event_id][response.status] += 1;
+        if (response.user_id === userId) myStatus[response.event_id] = response.status;
+      }
+    }
+
     events = (eventRows ?? []).map((event) => ({
       ...event,
       team_name: teamNames[event.team_id] ?? "Team",
+      going: counts[event.id]?.going ?? 0,
+      maybe: counts[event.id]?.maybe ?? 0,
+      declined: counts[event.id]?.declined ?? 0,
+      my_status: myStatus[event.id] ?? null,
     }));
   }
 

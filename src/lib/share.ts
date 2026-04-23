@@ -39,6 +39,28 @@ export function buildPaymentShareText(params: {
   return lines.join("\n");
 }
 
+// Poll blurb. Admins drop this into the team's WhatsApp chat so members can
+// vote even before they open the app. We number the options so screenshot
+// replies ("I'll go with 2") still parse for the admin reading along.
+export function buildPollShareText(params: {
+  question: string;
+  options: string[];
+  url: string;
+  closesAt: string | null;
+}): string {
+  const lines = [params.question];
+  params.options.forEach((option, index) => {
+    lines.push(`${index + 1}) ${option}`);
+  });
+  if (params.closesAt) {
+    lines.push("");
+    lines.push(`Closes ${new Date(params.closesAt).toLocaleString()}`);
+  }
+  lines.push("");
+  lines.push(`Vote: ${params.url}`);
+  return lines.join("\n");
+}
+
 // Pull the first http(s) URL out of free-text. We use this to promote pay
 // instructions embedded in the description (Venmo, PayPal, bank transfer
 // pages) into a dedicated tap target. Returns null if nothing looks like a URL.
