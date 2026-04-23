@@ -20,3 +20,30 @@ export function buildEventShareText(params: {
   lines.push(`RSVP: ${params.url}`);
   return lines.join("\n");
 }
+
+// Payment request blurb. Admins will typically drop this into the team's
+// WhatsApp group when chasing match fees. Keep the amount and due date on the
+// first two lines so it's scannable even in the chat preview.
+export function buildPaymentShareText(params: {
+  title: string;
+  amount: string;
+  due: string | null;
+  payLink: string | null;
+  url: string;
+}): string {
+  const lines = [`${params.title} — ${params.amount}`];
+  if (params.due) lines.push(`Due ${params.due}`);
+  if (params.payLink) lines.push(`Pay: ${params.payLink}`);
+  lines.push("");
+  lines.push(`Details + mark paid: ${params.url}`);
+  return lines.join("\n");
+}
+
+// Pull the first http(s) URL out of free-text. We use this to promote pay
+// instructions embedded in the description (Venmo, PayPal, bank transfer
+// pages) into a dedicated tap target. Returns null if nothing looks like a URL.
+export function extractFirstUrl(text: string | null): string | null {
+  if (!text) return null;
+  const match = text.match(/https?:\/\/[^\s<>"']+/i);
+  return match ? match[0] : null;
+}

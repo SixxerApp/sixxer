@@ -34,11 +34,13 @@ async function fetchPaymentDetail(paymentId: string, userId: string | undefined)
       request: null,
       assignments: [] as AssignmentRow[],
       isAdmin: false,
+      clubId: null as string | null,
     };
   }
 
   let isAdmin = false;
   let teamName = "Team";
+  let clubId: string | null = null;
   if (userId) {
     const { data: team } = await supabase
       .from("teams")
@@ -47,6 +49,7 @@ async function fetchPaymentDetail(paymentId: string, userId: string | undefined)
       .maybeSingle();
     if (team) {
       teamName = team.name;
+      clubId = team.club_id;
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
@@ -98,7 +101,41 @@ async function fetchPaymentDetail(paymentId: string, userId: string | undefined)
       full_name: names[row.user_id] ?? "Member",
     })),
     isAdmin,
+    clubId,
   };
+}
+
+export function isPaymentOverdue(
+  dueAt: string | null,
+  myStatus: AssignmentRow["status"] | undefined,
+): boolean {
+  if (!dueAt) return false;
+  if (myStatus === "confirmed" || myStatus === "marked_paid") return false;
+  return new Date(dueAt).getTime() < Date.now();
+}
+
+// Nudge everyone still on "unpaid" or "rejected" with an in-app notification.
+// Rejected == admin bounced their self-mark; they still owe. Mirrors the
+// event-reminder pattern on purpose so the notifications UI treats them the
+// same way.
+async function insertPaymentReminders(params: {
+  clubId: string;
+  userIds: string[];
+  title: string;
+  amount: string;
+  paymentId: string;
+}) {
+  if (params.userIds.length === 0) return { error: null };
+  return supabase.from("notifications").insert(
+    params.userIds.map((userId) => ({
+      user_id: userId,
+      club_id: params.clubId,
+      type: "payment_reminder",
+      title: `Payment due: ${params.title}`,
+      body: `${params.amount} — open to mark as paid.`,
+      link: `/payments/${params.paymentId}`,
+    })),
+  );
 }
 
 export async function markPaymentAsPaid(paymentId: string, userId: string, note: string | null) {
@@ -130,6 +167,7 @@ export function usePaymentDetail(paymentId: string, userId: string | undefined) 
   const [request, setRequest] = React.useState<PaymentRequestRow | null>(null);
   const [assignments, setAssignments] = React.useState<AssignmentRow[]>([]);
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [clubId, setClubId] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
 
@@ -139,6 +177,7 @@ export function usePaymentDetail(paymentId: string, userId: string | undefined) 
     setRequest(detail.request);
     setAssignments(detail.assignments);
     setIsAdmin(detail.isAdmin);
+    setClubId(detail.clubId);
     setLoading(false);
   }, [paymentId, userId]);
 
@@ -173,5 +212,60 @@ export function usePaymentDetail(paymentId: string, userId: string | undefined) 
     [load],
   );
 
-  return { request, assignments, isAdmin, loading, busy, markPaid, updateStatus };
+  // Confirm every assignment currently in marked_paid state in a single write.
+  // Preserves the admin's audit trail by stamping confirmed_at on each row.
+  const bulkConfirmPending = React.useCallback(async () => {
+    const pending = assignments.filter((a) => a.status === "marked_paid");
+    if (pending.length === 0) return { error: null, confirmed: 0 };
+    setBusy(true);
+    const result = await supabase
+      .from("payment_assignments")
+      .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
+      .in(
+        "id",
+        pending.map((a) => a.id),
+      );
+    setBusy(false);
+    if (!result.error) {
+      await load();
+    }
+    return { error: result.error, confirmed: pending.length };
+  }, [assignments, load]);
+
+  const remindUnpaid = React.useCallback(async () => {
+    if (!clubId || !request) {
+      return { error: new Error("Missing payment context"), remindedCount: 0 };
+    }
+    const targets = assignments
+      .filter((a) => a.status === "unpaid" || a.status === "rejected")
+      .map((a) => a.user_id);
+    if (targets.length === 0) return { error: null, remindedCount: 0 };
+    setBusy(true);
+    const amount = new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: request.currency,
+    }).format(request.amount_cents / 100);
+    const result = await insertPaymentReminders({
+      clubId,
+      userIds: targets,
+      title: request.title,
+      amount,
+      paymentId,
+    });
+    setBusy(false);
+    return { error: result.error, remindedCount: targets.length };
+  }, [assignments, clubId, paymentId, request]);
+
+  return {
+    request,
+    assignments,
+    isAdmin,
+    clubId,
+    loading,
+    busy,
+    markPaid,
+    updateStatus,
+    bulkConfirmPending,
+    remindUnpaid,
+  };
 }

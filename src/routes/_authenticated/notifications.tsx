@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { formatRelativeDay } from "@/lib/format";
 import {
   markAllNotificationsRead,
+  markNotificationRead,
   useNotificationCenter,
 } from "@/features/notifications/use-notification-center";
 
@@ -15,12 +16,17 @@ export const Route = createFileRoute("/_authenticated/notifications")({
 
 function NotificationsPage() {
   const { user } = useAuth();
-  const { rows, loading, unreadCount, reload } = useNotificationCenter(user?.id);
+  const { rows, loading, unreadCount, reload, markRead } = useNotificationCenter(user?.id);
 
   async function markAllRead() {
     if (!user) return;
     await markAllNotificationsRead(user.id);
     void reload();
+  }
+
+  function handleOpen(id: string, alreadyRead: boolean) {
+    if (alreadyRead || !user) return;
+    void markRead(id);
   }
 
   return (
@@ -77,7 +83,23 @@ function NotificationsPage() {
                 </div>
               </div>
             );
-            return <li key={n.id}>{n.link ? <Link to={n.link}>{inner}</Link> : inner}</li>;
+            return (
+              <li key={n.id}>
+                {n.link ? (
+                  <Link to={n.link} onClick={() => handleOpen(n.id, !!n.read_at)}>
+                    {inner}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleOpen(n.id, !!n.read_at)}
+                    className="block w-full text-left"
+                  >
+                    {inner}
+                  </button>
+                )}
+              </li>
+            );
           })}
         </ul>
       )}

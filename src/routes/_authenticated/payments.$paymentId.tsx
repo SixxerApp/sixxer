@@ -1,11 +1,13 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
+import { AlertTriangle, BellRing, CheckCheck, ExternalLink, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
 import { InitialAvatar } from "@/components/Avatar";
 import { formatMoney, formatRelativeDay } from "@/lib/format";
-import { usePaymentDetail } from "@/features/payments/use-payment-detail";
+import { isPaymentOverdue, usePaymentDetail } from "@/features/payments/use-payment-detail";
 import { usePlatform } from "@/platform";
+import { buildPaymentShareText, extractFirstUrl, whatsAppShareUrl } from "@/lib/share";
 import { StatusChip } from "./groups.$teamId.payments";
 
 export const Route = createFileRoute("/_authenticated/payments/$paymentId")({
@@ -24,6 +26,8 @@ function PaymentDetail() {
     busy,
     markPaid: submitMarkPaid,
     updateStatus,
+    bulkConfirmPending,
+    remindUnpaid,
   } = usePaymentDetail(paymentId, user?.id);
 
   async function handleMarkPaid() {
@@ -40,6 +44,46 @@ function PaymentDetail() {
   async function adminUpdate(assignmentId: string, status: "confirmed" | "rejected" | "unpaid") {
     const { error } = await updateStatus(assignmentId, status);
     if (error) toast.error(error.message);
+  }
+
+  async function handleRemind() {
+    const { error, remindedCount } = await remindUnpaid();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (remindedCount === 0) toast.success("Nobody left to remind");
+    else toast.success(`Reminded ${remindedCount} player${remindedCount === 1 ? "" : "s"}`);
+  }
+
+  async function handleBulkConfirm() {
+    const { error, confirmed } = await bulkConfirmPending();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (confirmed === 0) toast.success("Nothing pending");
+    else toast.success(`Confirmed ${confirmed} payment${confirmed === 1 ? "" : "s"}`);
+  }
+
+  async function handleShare() {
+    if (!req) return;
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const shareText = buildPaymentShareText({
+      title: req.title,
+      amount: formatMoney(req.amount_cents, req.currency),
+      due: req.due_at ? formatRelativeDay(req.due_at) : null,
+      payLink: extractFirstUrl(req.description),
+      url: `${origin}/payments/${req.id}`,
+    });
+    try {
+      await platform.clipboard.writeText(shareText);
+    } catch {
+      // Clipboard write is nice-to-have; the deep link still opens WhatsApp.
+    }
+    if (typeof window !== "undefined") {
+      window.open(whatsAppShareUrl(shareText), "_blank", "noopener,noreferrer");
+    }
   }
 
   if (loading) {
@@ -64,16 +108,32 @@ function PaymentDetail() {
     total: assignments.length,
     confirmed: assignments.filter((a) => a.status === "confirmed").length,
     pending: assignments.filter((a) => a.status === "marked_paid").length,
-    unpaid: assignments.filter((a) => a.status === "unpaid").length,
+    unpaid: assignments.filter((a) => a.status === "unpaid" || a.status === "rejected").length,
   };
+  const overdue = isPaymentOverdue(req.due_at, me?.status);
+  const payLink = extractFirstUrl(req.description);
+  const unansweredCount = totals.unpaid;
 
   return (
     <div className="px-5 pb-8">
       <PageHeader title="Payment request" />
-      <div className="mt-2 rounded-3xl border border-border bg-card p-5">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {req.due_at ? `Due ${formatRelativeDay(req.due_at)}` : "No due date"}
-        </p>
+      <div
+        className={
+          "mt-2 rounded-3xl border bg-card p-5 " +
+          (overdue ? "border-destructive/60" : "border-border")
+        }
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {req.due_at ? `Due ${formatRelativeDay(req.due_at)}` : "No due date"}
+          </p>
+          {overdue && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-bold uppercase text-destructive">
+              <AlertTriangle className="h-3 w-3" />
+              Overdue
+            </span>
+          )}
+        </div>
         <h1 className="mt-1 text-xl font-extrabold tracking-tight">{req.title}</h1>
         <p className="mt-3 text-3xl font-extrabold text-primary">
           {formatMoney(req.amount_cents, req.currency)}
@@ -83,6 +143,29 @@ function PaymentDetail() {
         </p>
         {req.description && <p className="mt-3 text-sm text-muted-foreground">{req.description}</p>}
       </div>
+
+      {payLink && (
+        <a
+          href={payLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-3 text-sm"
+        >
+          <span className="flex items-center gap-2 font-semibold text-primary">
+            <ExternalLink className="h-4 w-4" />
+            Open payment link
+          </span>
+          <span className="truncate text-xs text-primary/80">{payLink}</span>
+        </a>
+      )}
+
+      <button
+        onClick={handleShare}
+        className="mt-3 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full border border-border bg-card text-xs font-semibold"
+      >
+        <Share2 className="h-4 w-4" />
+        Share to WhatsApp
+      </button>
 
       {!isAdmin && me && (
         <div className="mt-4">
@@ -122,10 +205,36 @@ function PaymentDetail() {
       )}
 
       {isAdmin && (
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-          <Stat label="Confirmed" value={`${totals.confirmed}/${totals.total}`} tone="success" />
-          <Stat label="Pending" value={String(totals.pending)} tone="warning" />
-          <Stat label="Unpaid" value={String(totals.unpaid)} tone="destructive" />
+        <div className="mt-4 space-y-3">
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <Stat label="Confirmed" value={`${totals.confirmed}/${totals.total}`} tone="success" />
+            <Stat label="Pending" value={String(totals.pending)} tone="warning" />
+            <Stat label="Unpaid" value={String(totals.unpaid)} tone="destructive" />
+          </div>
+          {(totals.pending > 0 || unansweredCount > 0) && (
+            <div className="flex flex-wrap gap-2">
+              {totals.pending > 0 && (
+                <button
+                  onClick={handleBulkConfirm}
+                  disabled={busy}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-success/40 bg-success/10 px-3 text-xs font-semibold text-success"
+                >
+                  <CheckCheck className="h-3.5 w-3.5" />
+                  Confirm {totals.pending} pending
+                </button>
+              )}
+              {unansweredCount > 0 && (
+                <button
+                  onClick={handleRemind}
+                  disabled={busy}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold"
+                >
+                  <BellRing className="h-3.5 w-3.5" />
+                  Remind {unansweredCount} unpaid
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 

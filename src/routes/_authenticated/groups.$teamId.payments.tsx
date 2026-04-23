@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { Wallet } from "lucide-react";
+import { AlertTriangle, Wallet } from "lucide-react";
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useTeamContext } from "@/lib/team-context";
 import { EmptyState } from "@/components/EmptyState";
 import { formatMoney, formatRelativeDay } from "@/lib/format";
+import { isPaymentOverdue } from "@/features/payments/use-payment-detail";
 
 export const Route = createFileRoute("/_authenticated/groups/$teamId/payments")({
   component: PaymentsTab,
@@ -99,39 +100,65 @@ function PaymentsTab() {
         />
       ) : (
         <ul className="space-y-3">
-          {rows.map((r) => (
-            <li key={r.id}>
-              <Link
-                to="/payments/$paymentId"
-                params={{ paymentId: r.id }}
-                className="block rounded-2xl border border-border bg-card p-4 transition-colors hover:bg-secondary"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{r.title}</p>
-                    {r.due_at && (
-                      <p className="text-xs text-muted-foreground">
-                        Due {formatRelativeDay(r.due_at)}
-                      </p>
-                    )}
-                  </div>
-                  <span className="text-base font-extrabold">
-                    {formatMoney(r.amount_cents, r.currency)}
-                  </span>
-                </div>
-                <div className="mt-3 flex items-center gap-2 text-xs">
-                  {ctx?.isAdmin ? (
-                    <span className="text-muted-foreground">
-                      {r.totals.confirmed}/{r.totals.total} confirmed
-                      {r.totals.paid > 0 && ` · ${r.totals.paid} pending`}
+          {rows.map((r) => {
+            const overdue = isPaymentOverdue(r.due_at, r.myStatus);
+            const progress =
+              r.totals.total > 0
+                ? Math.round(((r.totals.confirmed + r.totals.paid) / r.totals.total) * 100)
+                : 0;
+            return (
+              <li key={r.id}>
+                <Link
+                  to="/payments/$paymentId"
+                  params={{ paymentId: r.id }}
+                  className={
+                    "block rounded-2xl border bg-card p-4 transition-colors hover:bg-secondary " +
+                    (overdue ? "border-destructive/60" : "border-border")
+                  }
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{r.title}</p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                        {r.due_at && (
+                          <p className="text-xs text-muted-foreground">
+                            Due {formatRelativeDay(r.due_at)}
+                          </p>
+                        )}
+                        {overdue && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-destructive">
+                            <AlertTriangle className="h-3 w-3" />
+                            Overdue
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-base font-extrabold">
+                      {formatMoney(r.amount_cents, r.currency)}
                     </span>
-                  ) : r.myStatus ? (
-                    <StatusChip status={r.myStatus} />
-                  ) : null}
-                </div>
-              </Link>
-            </li>
-          ))}
+                  </div>
+                  <div className="mt-3 flex items-center gap-2 text-xs">
+                    {ctx?.isAdmin ? (
+                      <div className="flex w-full items-center gap-2">
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
+                          <div
+                            className="h-full bg-success transition-[width]"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <span className="shrink-0 text-muted-foreground">
+                          {r.totals.confirmed}/{r.totals.total}
+                          {r.totals.paid > 0 && ` · ${r.totals.paid} pending`}
+                        </span>
+                      </div>
+                    ) : r.myStatus ? (
+                      <StatusChip status={r.myStatus} />
+                    ) : null}
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

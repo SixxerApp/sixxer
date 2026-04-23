@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRightLeft, Bell, CalendarPlus, Shield, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, Bell, CalendarPlus, Shield, Wallet } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { dateBlock, formatMoney, formatRelativeDay, formatTime } from "@/lib/format";
 import { InitialAvatar } from "@/components/Avatar";
 import { useHomeSummary } from "@/features/home/use-home-summary";
 import { useUserGroups } from "@/features/teams/use-user-groups";
+import { isPaymentOverdue } from "@/features/payments/use-payment-detail";
+import { useUnreadNotificationCount } from "@/features/notifications/use-notification-center";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({ meta: [{ title: "Home — Sixxer" }] }),
@@ -19,6 +21,7 @@ function HomePage() {
     "Player";
   const { name, events, payments, loading } = useHomeSummary(user?.id, fallbackName);
   const { clubs, loading: groupsLoading } = useUserGroups(user?.id);
+  const { count: unreadNotifications } = useUnreadNotificationCount(user?.id);
 
   const firstName = name.split(" ")[0];
   const teams = clubs.flatMap((club) =>
@@ -48,10 +51,19 @@ function HomePage() {
         <div className="flex items-center gap-2">
           <Link
             to="/notifications"
-            className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card text-foreground"
-            aria-label="Notifications"
+            className="relative grid h-10 w-10 place-items-center rounded-full border border-border bg-card text-foreground"
+            aria-label={
+              unreadNotifications > 0
+                ? `Notifications, ${unreadNotifications} unread`
+                : "Notifications"
+            }
           >
             <Bell className="h-5 w-5" />
+            {unreadNotifications > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-[20px] place-items-center rounded-full border-2 border-background bg-destructive px-1 text-[10px] font-bold leading-none text-destructive-foreground">
+                {unreadNotifications > 99 ? "99+" : unreadNotifications}
+              </span>
+            )}
           </Link>
           <Link
             to="/groups"
@@ -131,30 +143,44 @@ function HomePage() {
           </div>
         ) : (
           <ul className="space-y-2">
-            {payments.map((p) => (
-              <li key={p.request_id}>
-                <Link
-                  to="/payments/$paymentId"
-                  params={{ paymentId: p.request_id }}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{p.title}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      To {p.requested_by_name} · {p.team_name}
-                    </p>
-                    {p.due_at && (
+            {payments.map((p) => {
+              const overdue = isPaymentOverdue(p.due_at, "unpaid");
+              return (
+                <li key={p.request_id}>
+                  <Link
+                    to="/payments/$paymentId"
+                    params={{ paymentId: p.request_id }}
+                    className={
+                      "flex items-center justify-between gap-3 rounded-2xl border bg-card p-4 " +
+                      (overdue ? "border-destructive/60" : "border-border")
+                    }
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold">{p.title}</p>
+                        {overdue && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-destructive">
+                            <AlertTriangle className="h-3 w-3" />
+                            Overdue
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[11px] text-muted-foreground">
-                        Due {formatRelativeDay(p.due_at)}
+                        To {p.requested_by_name} · {p.team_name}
                       </p>
-                    )}
-                  </div>
-                  <span className="text-sm font-extrabold text-primary">
-                    {formatMoney(p.amount_cents, p.currency)}
-                  </span>
-                </Link>
-              </li>
-            ))}
+                      {p.due_at && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Due {formatRelativeDay(p.due_at)}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-sm font-extrabold text-primary">
+                      {formatMoney(p.amount_cents, p.currency)}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
