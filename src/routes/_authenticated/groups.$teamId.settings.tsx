@@ -38,11 +38,7 @@ function TeamSettings() {
   async function leaveTeam() {
     if (!user) return;
     if (!confirm("Leave this team?")) return;
-    await supabase
-      .from("team_members")
-      .delete()
-      .eq("team_id", teamId)
-      .eq("user_id", user.id);
+    await supabase.from("team_members").delete().eq("team_id", teamId).eq("user_id", user.id);
     toast.success("Left team");
     navigate({ to: "/groups" });
   }

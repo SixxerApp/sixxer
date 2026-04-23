@@ -1,4 +1,5 @@
 ---
+
 name: Athletic Minimalist
 colors:
   surface: '#0f1415'
@@ -97,8 +98,8 @@ spacing:
   lg: 24px
   xl: 32px
   container-margin: 16px
-  gutter: 12px
----
+
+##   gutter: 12px
 
 ## Brand & Style
 

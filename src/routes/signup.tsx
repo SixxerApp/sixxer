@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { signUpWithPassword } from "@/features/auth/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,14 +38,11 @@ function SignupPage() {
       return;
     }
     setSubmitting(true);
-    const { error } = await supabase.auth.signUp({
-      email: parsed.data.email,
-      password: parsed.data.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/home`,
-        data: { full_name: parsed.data.fullName },
-      },
-    });
+    const { error } = await signUpWithPassword(
+      parsed.data.fullName,
+      parsed.data.email,
+      parsed.data.password,
+    );
     setSubmitting(false);
     if (error) {
       toast.error(error.message);

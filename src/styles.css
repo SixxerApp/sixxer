@@ -55,7 +55,12 @@
 
 /* Light theme */
 :root {
-  --radius: 1rem;
+  /*
+   * Base corner radius. The whole rounded-* scale is derived from this, so
+   * changing this single value retints every card, input, and button in the
+   * app. Tracks Design.md §Shapes (0.5rem base, "Rounded philosophy").
+   */
+  --radius: 0.25rem;
 
   --background: #f4f8f7;
   --foreground: #102022;
@@ -102,6 +107,13 @@
 
 /* Dark theme */
 .dark {
+	/*
+   * Base corner radius. The whole rounded-* scale is derived from this, so
+   * changing this single value retints every card, input, and button in the
+   * app. Tracks Design.md §Shapes (0.5rem base, "Rounded philosophy").
+   */
+	--radius: 0.25rem;
+
   --background: #0f1415;
   --foreground: #dee4e3;
 
@@ -160,9 +172,13 @@
   }
 
   body {
+    min-height: 100dvh;
     background-image:
       radial-gradient(circle at top, rgb(84 217 217 / 0.12), transparent 30%),
       linear-gradient(180deg, rgb(255 255 255 / 0.02), transparent 18rem);
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   h1,
@@ -175,5 +191,9 @@
   /* Reserve space for the bottom tab bar on mobile */
   body.has-tabbar {
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  }
+
+  #__tanstack {
+    min-height: 100dvh;
   }
 }

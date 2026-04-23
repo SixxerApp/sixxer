@@ -1,111 +1,37 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, Plus, Wallet, CalendarPlus } from "lucide-react";
-import * as React from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { ArrowRightLeft, Bell, CalendarPlus, Shield, Wallet } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { dateBlock, formatMoney, formatRelativeDay, formatTime } from "@/lib/format";
 import { InitialAvatar } from "@/components/Avatar";
+import { useHomeSummary } from "@/features/home/use-home-summary";
+import { useUserGroups } from "@/features/teams/use-user-groups";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({ meta: [{ title: "Home — Sixxer" }] }),
   component: HomePage,
 });
 
-interface UpcomingEvent {
-  id: string;
-  team_id: string;
-  team_name: string;
-  title: string;
-  starts_at: string;
-  home_away: "home" | "away" | null;
-}
-
-interface OutstandingPayment {
-  request_id: string;
-  title: string;
-  amount_cents: number;
-  currency: string;
-  due_at: string | null;
-}
-
 function HomePage() {
   const { user } = useAuth();
-  const [name, setName] = React.useState("Player");
-  const [events, setEvents] = React.useState<UpcomingEvent[]>([]);
-  const [payments, setPayments] = React.useState<OutstandingPayment[]>([]);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    if (!user) return;
-    (async () => {
-      setLoading(true);
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (prof?.full_name) setName(prof.full_name);
-
-      // Teams I'm a member of
-      const { data: tm } = await supabase
-        .from("team_members")
-        .select("team_id, teams:team_id(id, name)")
-        .eq("user_id", user.id);
-      const teamIds = (tm ?? []).map((t) => t.team_id);
-      const teamNames: Record<string, string> = {};
-      for (const t of tm ?? []) {
-        const team = t.teams as { id: string; name: string } | null;
-        if (team) teamNames[team.id] = team.name;
-      }
-      if (teamIds.length) {
-        const now = new Date().toISOString();
-        const { data: evs } = await supabase
-          .from("events")
-          .select("id, team_id, title, starts_at, home_away")
-          .in("team_id", teamIds)
-          .gte("starts_at", now)
-          .order("starts_at", { ascending: true })
-          .limit(5);
-        setEvents(
-          (evs ?? []).map((e) => ({
-            ...e,
-            team_name: teamNames[e.team_id] ?? "Team",
-          })),
-        );
-      } else {
-        setEvents([]);
-      }
-
-      // Outstanding payments for me
-      const { data: assigns } = await supabase
-        .from("payment_assignments")
-        .select("request_id, status")
-        .eq("user_id", user.id)
-        .in("status", ["unpaid", "rejected"]);
-      const reqIds = (assigns ?? []).map((a) => a.request_id);
-      if (reqIds.length) {
-        const { data: reqs } = await supabase
-          .from("payment_requests")
-          .select("id, title, amount_cents, currency, due_at")
-          .in("id", reqIds)
-          .order("due_at", { ascending: true, nullsFirst: false });
-        setPayments(
-          (reqs ?? []).map((r) => ({
-            request_id: r.id,
-            title: r.title,
-            amount_cents: r.amount_cents,
-            currency: r.currency,
-            due_at: r.due_at,
-          })),
-        );
-      } else {
-        setPayments([]);
-      }
-      setLoading(false);
-    })();
-  }, [user]);
+  const fallbackName =
+    (typeof user?.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) ||
+    user?.email?.split("@")[0] ||
+    "Player";
+  const { name, events, payments, loading } = useHomeSummary(user?.id, fallbackName);
+  const { clubs, loading: groupsLoading } = useUserGroups(user?.id);
 
   const firstName = name.split(" ")[0];
+  const teams = clubs.flatMap((club) =>
+    club.teams.map((team) => ({
+      clubId: club.id,
+      clubName: club.name,
+      teamId: team.id,
+      teamName: team.name,
+      isAdmin: club.isAdmin,
+    })),
+  );
+  const adminTeams = teams.filter((team) => team.isAdmin);
+  const totalOwed = payments.reduce((sum, payment) => sum + payment.amount_cents, 0);
 
   return (
     <div className="px-5 pb-6 pt-6">
@@ -129,16 +55,21 @@ function HomePage() {
           </Link>
           <Link
             to="/groups"
-            className="grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/30"
-            aria-label="Create"
+            className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card text-foreground"
+            aria-label="Switch teams"
           >
-            <Plus className="h-5 w-5" />
+            <ArrowRightLeft className="h-5 w-5" />
           </Link>
         </div>
       </header>
 
       <section className="mt-7">
-        <h2 className="mb-3 text-base font-bold tracking-tight">Upcoming</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold tracking-tight">Next 7 days</h2>
+          <Link to="/groups" className="text-xs font-semibold text-primary">
+            All teams
+          </Link>
+        </div>
         {loading ? (
           <div className="h-24 animate-pulse rounded-2xl bg-card" />
         ) : events.length === 0 ? (
@@ -147,7 +78,7 @@ function HomePage() {
             className="flex items-center gap-3 rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground"
           >
             <CalendarPlus className="h-5 w-5 text-primary" />
-            No fixtures yet — join or create a club.
+            Nothing scheduled in the next week.
           </Link>
         ) : (
           <ul className="space-y-2">
@@ -183,7 +114,14 @@ function HomePage() {
       </section>
 
       <section className="mt-7">
-        <h2 className="mb-3 text-base font-bold tracking-tight">Outstanding payments</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold tracking-tight">What you owe</h2>
+          {!loading && payments.length > 0 && (
+            <span className="text-sm font-extrabold text-primary">
+              {formatMoney(totalOwed, payments[0]?.currency ?? "USD")}
+            </span>
+          )}
+        </div>
         {loading ? (
           <div className="h-20 animate-pulse rounded-2xl bg-card" />
         ) : payments.length === 0 ? (
@@ -202,6 +140,9 @@ function HomePage() {
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{p.title}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      To {p.requested_by_name} · {p.team_name}
+                    </p>
                     {p.due_at && (
                       <p className="text-[11px] text-muted-foreground">
                         Due {formatRelativeDay(p.due_at)}
@@ -217,6 +158,73 @@ function HomePage() {
           </ul>
         )}
       </section>
+
+      <section className="mt-7">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold tracking-tight">Your teams</h2>
+          <Link to="/groups" className="text-xs font-semibold text-primary">
+            Switch
+          </Link>
+        </div>
+        {groupsLoading ? (
+          <div className="h-20 animate-pulse rounded-2xl bg-card" />
+        ) : teams.length === 0 ? (
+          <Link
+            to="/join"
+            className="block rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground"
+          >
+            Join a club with an invite code.
+          </Link>
+        ) : (
+          <div className="space-y-2">
+            {teams.map((team) => (
+              <Link
+                key={team.teamId}
+                to="/groups/$teamId"
+                params={{ teamId: team.teamId }}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{team.teamName}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">{team.clubName}</p>
+                </div>
+                <span className="text-xs font-semibold text-primary">Open</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {adminTeams.length > 0 && (
+        <section className="mt-7">
+          <h2 className="mb-3 text-base font-bold tracking-tight">Admin tools</h2>
+          <div className="space-y-2">
+            {adminTeams.map((team) => (
+              <Link
+                key={team.teamId}
+                to="/groups/$teamId/members"
+                params={{ teamId: team.teamId }}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-full bg-primary/12 text-primary">
+                    <Shield className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">
+                      Create access for {team.teamName}
+                    </p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      Invite players and manage membership
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-semibold text-primary">Manage</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

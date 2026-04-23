@@ -1,9 +1,16 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import { AppShell } from "@/components/AppShell";
 import { ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
+import { PlatformProvider } from "@/platform";
+import { AppErrorBoundary } from "@/lib/observability";
+import { initObservability } from "@/lib/observability-init";
+
+initObservability();
 
 function NotFoundComponent() {
   return (
@@ -48,6 +55,9 @@ export const Route = createRootRoute({
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -64,6 +74,9 @@ export const Route = createRootRoute({
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap",
       },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", href: "/icons/app-icon.svg", type: "image/svg+xml" },
+      { rel: "apple-touch-icon", href: "/icons/app-icon.svg" },
     ],
   }),
   shellComponent: RootShell,
@@ -71,7 +84,7 @@ export const Route = createRootRoute({
   notFoundComponent: NotFoundComponent,
 });
 
-function RootShell({ children }: { children: React.ReactNode }) {
+function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="dark" style={{ colorScheme: "dark" }}>
       <head>
@@ -87,11 +100,17 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <Outlet />
-        <Toaster />
-      </AuthProvider>
-    </ThemeProvider>
+    <AppErrorBoundary>
+      <PlatformProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppShell>
+              <Outlet />
+              <Toaster />
+            </AppShell>
+          </AuthProvider>
+        </ThemeProvider>
+      </PlatformProvider>
+    </AppErrorBoundary>
   );
 }

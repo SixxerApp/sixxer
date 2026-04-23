@@ -4,6 +4,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useTeamContext } from "@/lib/team-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ const schema = z.object({
 function NewPaymentPage() {
   const { teamId } = useSearch({ from: "/_authenticated/payments/new" });
   const { user } = useAuth();
+  const { data: ctx, loading: contextLoading } = useTeamContext(teamId, user?.id);
   const navigate = useNavigate();
   const [title, setTitle] = React.useState("");
   const [amount, setAmount] = React.useState("");
@@ -30,6 +32,26 @@ function NewPaymentPage() {
   const [dueAt, setDueAt] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
+
+  if (contextLoading) {
+    return (
+      <div className="px-5 pb-10">
+        <PageHeader title="New payment request" />
+        <div className="mt-4 h-32 animate-pulse rounded-2xl bg-card" />
+      </div>
+    );
+  }
+
+  if (!ctx?.isAdmin) {
+    return (
+      <div className="px-5 pb-10">
+        <PageHeader title="New payment request" />
+        <div className="mt-6 rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+          Only admins can create payment requests.
+        </div>
+      </div>
+    );
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();

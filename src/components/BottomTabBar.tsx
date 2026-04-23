@@ -1,22 +1,24 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, Bell, Users, MessageCircle } from "lucide-react";
+import { Home, Bell, Users, Calendar } from "lucide-react";
 import * as React from "react";
+import { usePlatform } from "@/platform";
 
 const tabs = [
   { to: "/home" as const, label: "Home", icon: Home },
   { to: "/notifications" as const, label: "Alerts", icon: Bell },
   { to: "/groups" as const, label: "Groups", icon: Users },
-  { to: "/messages" as const, label: "Chat", icon: MessageCircle },
+  { to: "/calendar" as const, label: "Calendar", icon: Calendar },
 ];
 
 export function BottomTabBar() {
   const location = useLocation();
+  const platform = usePlatform();
 
   // Reserve space on body for the fixed tab bar
   React.useEffect(() => {
-    document.body.classList.add("has-tabbar");
-    return () => document.body.classList.remove("has-tabbar");
-  }, []);
+    platform.ui.toggleBodyClass("has-tabbar", true);
+    return () => platform.ui.toggleBodyClass("has-tabbar", false);
+  }, [platform]);
 
   return (
     <nav
@@ -26,8 +28,7 @@ export function BottomTabBar() {
     >
       <ul className="mx-auto flex max-w-md items-stretch justify-around px-2 pt-1">
         {tabs.map((tab) => {
-          const active =
-            location.pathname === tab.to || location.pathname.startsWith(tab.to + "/");
+          const active = location.pathname === tab.to || location.pathname.startsWith(tab.to + "/");
           const Icon = tab.icon;
           return (
             <li key={tab.to} className="flex-1">

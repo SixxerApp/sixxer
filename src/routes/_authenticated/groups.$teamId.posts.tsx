@@ -46,9 +46,7 @@ function PostsTab() {
         .in("id", authorIds);
       for (const p of profs ?? []) names[p.id] = p.full_name;
     }
-    setPosts(
-      (rows ?? []).map((r) => ({ ...r, author_name: names[r.author_id] ?? "Member" })),
-    );
+    setPosts((rows ?? []).map((r) => ({ ...r, author_name: names[r.author_id] ?? "Member" })));
     setLoading(false);
   }, [teamId]);
 

@@ -9,7 +9,9 @@ export default defineConfig({
   plugins: [
     tsconfigPaths(),
     tanstackStart(),
-    nitro(),
+    nitro({
+      serverDir: "server",
+    }),
     react(),
     tailwindcss(),
   ],

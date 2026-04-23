@@ -41,12 +41,12 @@ export function initials(name: string) {
 }
 
 const COLORS = [
-  "oklch(0.7 0.18 5)",     // pink
-  "oklch(0.7 0.18 45)",    // orange
-  "oklch(0.72 0.15 150)",  // green
-  "oklch(0.7 0.16 220)",   // blue
-  "oklch(0.7 0.18 290)",   // violet
-  "oklch(0.72 0.15 80)",   // amber
+  "oklch(0.7 0.18 5)", // pink
+  "oklch(0.7 0.18 45)", // orange
+  "oklch(0.72 0.15 150)", // green
+  "oklch(0.7 0.16 220)", // blue
+  "oklch(0.7 0.18 290)", // violet
+  "oklch(0.72 0.15 80)", // amber
 ];
 
 export function colorFromString(s: string) {

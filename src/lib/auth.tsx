@@ -1,6 +1,12 @@
 import * as React from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  ensureUserProfile,
+  getExistingSession,
+  observeAuthState,
+  signOutUser,
+} from "@/features/auth/api";
+import { platformServices } from "@/platform";
 
 interface AuthContextValue {
   user: User | null;
@@ -17,24 +23,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    // 1) subscribe FIRST so we never miss an event
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    function syncSession(newSession: Session | null) {
       setSession(newSession);
       setUser(newSession?.user ?? null);
+
+      if (newSession?.user) {
+        void ensureUserProfile(newSession.user);
+      }
+    }
+
+    // 1) subscribe FIRST so we never miss an event
+    const { data: sub } = observeAuthState((_event, newSession) => {
+      syncSession(newSession);
     });
 
     // 2) then read existing session
-    supabase.auth.getSession().then(({ data: { session: existing } }) => {
-      setSession(existing);
-      setUser(existing?.user ?? null);
+    void getExistingSession().then((existing) => {
+      syncSession(existing);
       setLoading(false);
     });
 
-    return () => sub.subscription.unsubscribe();
+    let disposeResume: (() => void) | undefined;
+    void platformServices.app
+      .onResume(() => {
+        void getExistingSession().then((existing) => {
+          syncSession(existing);
+        });
+      })
+      .then((cleanup) => {
+        disposeResume = cleanup;
+      });
+
+    return () => {
+      sub.subscription.unsubscribe();
+      disposeResume?.();
+    };
   }, []);
 
   const signOut = React.useCallback(async () => {
-    await supabase.auth.signOut();
+    await signOutUser();
   }, []);
 
   const value = React.useMemo(

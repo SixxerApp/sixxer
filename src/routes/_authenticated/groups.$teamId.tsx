@@ -1,10 +1,8 @@
 import { createFileRoute, Link, Outlet, useLocation, useParams } from "@tanstack/react-router";
 import { Bell, ChevronLeft, MoreHorizontal, Plus, Star, Users } from "lucide-react";
-import * as React from "react";
 import { useAuth } from "@/lib/auth";
-import { useTeamContext } from "@/lib/team-context";
 import { colorFromString } from "@/lib/format";
-import { supabase } from "@/integrations/supabase/client";
+import { useTeamLayout } from "@/features/teams/use-team-layout";
 
 export const Route = createFileRoute("/_authenticated/groups/$teamId")({
   head: () => ({ meta: [{ title: "Team — Sixxer" }] }),
@@ -14,48 +12,11 @@ export const Route = createFileRoute("/_authenticated/groups/$teamId")({
 function TeamLayout() {
   const { teamId } = useParams({ from: "/_authenticated/groups/$teamId" });
   const { user } = useAuth();
-  const { data, loading, error } = useTeamContext(teamId, user?.id);
+  const { data, loading, error, memberCount, isFavorite, toggleFavorite } = useTeamLayout(
+    teamId,
+    user?.id,
+  );
   const location = useLocation();
-
-  // Member count
-  const [memberCount, setMemberCount] = React.useState<number | null>(null);
-  React.useEffect(() => {
-    let active = true;
-    (async () => {
-      const { count } = await supabase
-        .from("team_members")
-        .select("user_id", { count: "exact", head: true })
-        .eq("team_id", teamId);
-      if (active) setMemberCount(count ?? 0);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [teamId]);
-
-  // Local favorites (per-user, in localStorage)
-  const favKey = user ? `sixxer.favorites.${user.id}` : null;
-  const [isFav, setIsFav] = React.useState(false);
-  React.useEffect(() => {
-    if (!favKey) return;
-    try {
-      const raw = JSON.parse(localStorage.getItem(favKey) ?? "[]") as string[];
-      setIsFav(raw.includes(teamId));
-    } catch {
-      setIsFav(false);
-    }
-  }, [favKey, teamId]);
-  function toggleFav() {
-    if (!favKey) return;
-    try {
-      const raw = JSON.parse(localStorage.getItem(favKey) ?? "[]") as string[];
-      const next = raw.includes(teamId) ? raw.filter((x) => x !== teamId) : [...raw, teamId];
-      localStorage.setItem(favKey, JSON.stringify(next));
-      setIsFav(next.includes(teamId));
-    } catch {
-      // ignore
-    }
-  }
 
   if (loading) {
     return (
@@ -124,12 +85,14 @@ function TeamLayout() {
 
           <div className="flex items-center gap-1.5 rounded-full bg-white/15 px-1.5 py-1 backdrop-blur-md ring-1 ring-white/20">
             <button
-              onClick={toggleFav}
+              onClick={toggleFavorite}
               className="grid h-7 w-7 place-items-center rounded-full hover:bg-white/15"
-              aria-label={isFav ? "Unfavorite" : "Favorite"}
-              aria-pressed={isFav}
+              aria-label={isFavorite ? "Unfavorite" : "Favorite"}
+              aria-pressed={isFavorite}
             >
-              <Star className={"h-4 w-4 " + (isFav ? "fill-white text-white" : "text-white")} />
+              <Star
+                className={"h-4 w-4 " + (isFavorite ? "fill-white text-white" : "text-white")}
+              />
             </button>
             {data.isAdmin && (
               <Link
@@ -174,9 +137,7 @@ function TeamLayout() {
       {/* Tabs */}
       <nav className="sticky top-0 z-20 flex gap-1 overflow-x-auto border-b border-border bg-background/85 px-3 py-2 backdrop-blur-lg">
         {tabs.map((t) => {
-          const active = isOnTab
-            ? location.pathname.startsWith(t.to)
-            : t.to === eventsPath;
+          const active = isOnTab ? location.pathname.startsWith(t.to) : t.to === eventsPath;
           return (
             <Link
               key={t.to}

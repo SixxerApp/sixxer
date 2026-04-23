@@ -75,10 +75,12 @@ function EventsTab() {
       const q = supabase
         .from("events")
         .select("id, title, type, opponent, home_away, starts_at, location")
-        .eq("team_id", teamId);
-      const { data: rows } = filter === "upcoming"
-        ? await q.gte("starts_at", now).order("starts_at", { ascending: true })
-        : await q.lt("starts_at", now).order("starts_at", { ascending: false });
+        .eq("team_id", teamId)
+        .eq("is_cancelled", false);
+      const { data: rows } =
+        filter === "upcoming"
+          ? await q.gte("starts_at", now).order("starts_at", { ascending: true })
+          : await q.lt("starts_at", now).order("starts_at", { ascending: false });
       const ids = (rows ?? []).map((r) => r.id);
       const counts: Record<string, { going: number; maybe: number; declined: number }> = {};
       const mine: Record<string, "going" | "maybe" | "declined"> = {};

@@ -1,93 +1,20 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { Plus, Users, ChevronRight } from "lucide-react";
-import * as React from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { EmptyState } from "@/components/EmptyState";
 import { colorFromString } from "@/lib/format";
+import { useUserGroups } from "@/features/teams/use-user-groups";
 
 export const Route = createFileRoute("/_authenticated/groups")({
   head: () => ({ meta: [{ title: "Groups — Sixxer" }] }),
   component: GroupsPage,
 });
 
-interface TeamRow {
-  id: string;
-  name: string;
-  banner_color: string;
-  club_id: string;
-  member_count: number;
-}
-
-interface ClubGroup {
-  id: string;
-  name: string;
-  isAdmin: boolean;
-  teams: TeamRow[];
-}
-
 function GroupsPage() {
   const location = useLocation();
   const { user } = useAuth();
-  const [loading, setLoading] = React.useState(true);
-  const [clubs, setClubs] = React.useState<ClubGroup[]>([]);
+  const { clubs, loading } = useUserGroups(user?.id);
   const isGroupsListRoute = location.pathname === "/groups";
-
-  React.useEffect(() => {
-    if (!user) return;
-    (async () => {
-      setLoading(true);
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("club_id, role")
-        .eq("user_id", user.id);
-      const clubIds = Array.from(new Set((roles ?? []).map((r) => r.club_id)));
-      if (clubIds.length === 0) {
-        setClubs([]);
-        setLoading(false);
-        return;
-      }
-      const isAdminMap: Record<string, boolean> = {};
-      for (const r of roles ?? []) {
-        if (r.role === "admin") isAdminMap[r.club_id] = true;
-      }
-      const { data: clubRows } = await supabase
-        .from("clubs")
-        .select("id, name")
-        .in("id", clubIds)
-        .order("created_at", { ascending: true });
-      const { data: teamRows } = await supabase
-        .from("teams")
-        .select("id, name, banner_color, club_id")
-        .in("club_id", clubIds)
-        .order("created_at", { ascending: true });
-      const teamIds = (teamRows ?? []).map((t) => t.id);
-      const counts: Record<string, number> = {};
-      if (teamIds.length) {
-        const { data: members } = await supabase
-          .from("team_members")
-          .select("team_id")
-          .in("team_id", teamIds);
-        for (const m of members ?? []) counts[m.team_id] = (counts[m.team_id] ?? 0) + 1;
-      }
-      const grouped: ClubGroup[] = (clubRows ?? []).map((c) => ({
-        id: c.id,
-        name: c.name,
-        isAdmin: !!isAdminMap[c.id],
-        teams: (teamRows ?? [])
-          .filter((t) => t.club_id === c.id)
-          .map((t) => ({
-            id: t.id,
-            name: t.name,
-            banner_color: t.banner_color,
-            club_id: t.club_id,
-            member_count: counts[t.id] ?? 0,
-          })),
-      }));
-      setClubs(grouped);
-      setLoading(false);
-    })();
-  }, [user]);
 
   if (!isGroupsListRoute) {
     return <Outlet />;

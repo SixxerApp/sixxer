@@ -4,10 +4,17 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useTeamContext } from "@/lib/team-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/PageHeader";
+import { createEventSeries } from "@/features/events/use-event-series";
+import {
+  describeRecurrence,
+  MAX_OCCURRENCES,
+  type RecurrenceFreq,
+} from "@/features/events/recurrence";
 
 export const Route = createFileRoute("/_authenticated/events/new")({
   validateSearch: (s: Record<string, unknown>) => ({ teamId: String(s.teamId ?? "") }),
@@ -23,9 +30,19 @@ const schema = z.object({
   description: z.string().trim().max(1000).optional(),
 });
 
+type RepeatOption = "none" | RecurrenceFreq;
+
+const REPEAT_OPTIONS: { value: RepeatOption; label: string }[] = [
+  { value: "none", label: "Does not repeat" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+];
+
 function NewEventPage() {
   const { teamId } = useSearch({ from: "/_authenticated/events/new" });
   const { user } = useAuth();
+  const { data: ctx, loading: contextLoading } = useTeamContext(teamId, user?.id);
   const navigate = useNavigate();
   const [type, setType] = React.useState<"match" | "event">("match");
   const [homeAway, setHomeAway] = React.useState<"home" | "away">("home");
@@ -38,11 +55,39 @@ function NewEventPage() {
   const [description, setDescription] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
 
+  const [repeat, setRepeat] = React.useState<RepeatOption>("none");
+  const [interval, setInterval] = React.useState("1");
+  const [count, setCount] = React.useState("12");
+
+  if (contextLoading) {
+    return (
+      <div className="px-5 pb-10">
+        <PageHeader title="New event" />
+        <div className="mt-4 h-32 animate-pulse rounded-2xl bg-card" />
+      </div>
+    );
+  }
+
+  if (!ctx?.isAdmin) {
+    return (
+      <div className="px-5 pb-10">
+        <PageHeader title="New event" />
+        <div className="mt-6 rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+          Only admins can create events.
+        </div>
+      </div>
+    );
+  }
+
+  const intervalNum = clampParsed(interval, 1, 52, 1);
+  const countNum = clampParsed(count, 1, MAX_OCCURRENCES, 1);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user || !teamId) return;
     const finalTitle =
-      title || (type === "match" && opponent ? `${homeAway === "home" ? "vs" : "@"} ${opponent}` : "");
+      title ||
+      (type === "match" && opponent ? `${homeAway === "home" ? "vs" : "@"} ${opponent}` : "");
     const parsed = schema.safeParse({
       title: finalTitle,
       startsAt,
@@ -54,7 +99,48 @@ function NewEventPage() {
       toast.error(parsed.error.issues[0]?.message ?? "Check the form");
       return;
     }
+
     setSubmitting(true);
+    const startsAtDate = new Date(startsAt);
+    const meetupDate = meetupAt ? new Date(meetupAt) : null;
+    const endsAtDate = endsAt ? new Date(endsAt) : null;
+
+    if (repeat !== "none") {
+      const meetupOffset =
+        meetupDate !== null
+          ? Math.round((startsAtDate.getTime() - meetupDate.getTime()) / 60_000)
+          : null;
+      const duration =
+        endsAtDate !== null
+          ? Math.round((endsAtDate.getTime() - startsAtDate.getTime()) / 60_000)
+          : null;
+
+      const { seriesId, eventIds, error } = await createEventSeries({
+        teamId,
+        title: parsed.data.title,
+        type,
+        startsAt: startsAtDate,
+        durationMinutes: duration,
+        meetupOffsetMinutes: meetupOffset,
+        location: location || null,
+        locationUrl: null,
+        description: description || null,
+        createdBy: user.id,
+        recurrence: { freq: repeat, interval: intervalNum, count: countNum },
+        opponent: type === "match" ? opponent || null : null,
+        homeAway: type === "match" ? homeAway : null,
+      });
+
+      setSubmitting(false);
+      if (error || !seriesId || eventIds.length === 0) {
+        toast.error(error?.message ?? "Could not create series");
+        return;
+      }
+      toast.success(`Created ${eventIds.length} events`);
+      navigate({ to: "/events/$eventId", params: { eventId: eventIds[0] } });
+      return;
+    }
+
     const { data, error } = await supabase
       .from("events")
       .insert({
@@ -63,9 +149,9 @@ function NewEventPage() {
         title: parsed.data.title,
         opponent: type === "match" ? opponent || null : null,
         home_away: type === "match" ? homeAway : null,
-        starts_at: new Date(startsAt).toISOString(),
-        meetup_at: meetupAt ? new Date(meetupAt).toISOString() : null,
-        ends_at: endsAt ? new Date(endsAt).toISOString() : null,
+        starts_at: startsAtDate.toISOString(),
+        meetup_at: meetupDate?.toISOString() ?? null,
+        ends_at: endsAtDate?.toISOString() ?? null,
         location: location || null,
         description: description || null,
         created_by: user.id,
@@ -136,7 +222,9 @@ function NewEventPage() {
         )}
 
         <div className="space-y-1.5">
-          <Label htmlFor="title">Title {type === "match" && <span className="text-muted-foreground">(optional)</span>}</Label>
+          <Label htmlFor="title">
+            Title {type === "match" && <span className="text-muted-foreground">(optional)</span>}
+          </Label>
           <Input
             id="title"
             value={title}
@@ -202,14 +290,71 @@ function NewEventPage() {
           />
         </div>
 
+        <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
+          <Label htmlFor="repeat">Repeats</Label>
+          <select
+            id="repeat"
+            value={repeat}
+            onChange={(e) => setRepeat(e.target.value as RepeatOption)}
+            className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            {REPEAT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          {repeat !== "none" && (
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="interval">Every</Label>
+                <Input
+                  id="interval"
+                  type="number"
+                  min={1}
+                  max={52}
+                  value={interval}
+                  onChange={(e) => setInterval(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="count">How many times</Label>
+                <Input
+                  id="count"
+                  type="number"
+                  min={1}
+                  max={MAX_OCCURRENCES}
+                  value={count}
+                  onChange={(e) => setCount(e.target.value)}
+                />
+              </div>
+              <p className="col-span-2 text-xs text-muted-foreground">
+                {describeRecurrence({ freq: repeat, interval: intervalNum, count: countNum })}. Each
+                instance gets its own RSVPs and can be cancelled individually.
+              </p>
+            </div>
+          )}
+        </div>
+
         <Button
           type="submit"
           disabled={submitting}
           className="h-11 w-full rounded-full text-sm font-semibold"
         >
-          {submitting ? "Creating…" : "Create event"}
+          {submitting
+            ? "Creating…"
+            : repeat === "none"
+              ? "Create event"
+              : `Create ${countNum} events`}
         </Button>
       </form>
     </div>
   );
+}
+
+function clampParsed(raw: string, min: number, max: number, fallback: number): number {
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, parsed));
 }

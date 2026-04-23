@@ -12,8 +12,54 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
+      calendar_tokens: {
+        Row: {
+          created_at: string
+          last_fetched_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          last_fetched_at?: string | null
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          last_fetched_at?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       clubs: {
         Row: {
           created_at: string
@@ -70,6 +116,100 @@ export type Database = {
           },
         ]
       }
+      event_series: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          location: string | null
+          location_url: string | null
+          meetup_offset_minutes: number | null
+          rrule: string
+          starts_at: string
+          team_id: string
+          title: string
+          type: Database["public"]["Enums"]["event_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          location?: string | null
+          location_url?: string | null
+          meetup_offset_minutes?: number | null
+          rrule: string
+          starts_at: string
+          team_id: string
+          title: string
+          type?: Database["public"]["Enums"]["event_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          location?: string | null
+          location_url?: string | null
+          meetup_offset_minutes?: number | null
+          rrule?: string
+          starts_at?: string
+          team_id?: string
+          title?: string
+          type?: Database["public"]["Enums"]["event_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_series_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_squads: {
+        Row: {
+          announced_at: string
+          announced_by: string
+          announcement_message: string | null
+          event_id: string
+          selected_user_ids: Json
+          updated_at: string
+        }
+        Insert: {
+          announced_at?: string
+          announced_by: string
+          announcement_message?: string | null
+          event_id: string
+          selected_user_ids?: Json
+          updated_at?: string
+        }
+        Update: {
+          announced_at?: string
+          announced_by?: string
+          announcement_message?: string | null
+          event_id?: string
+          selected_user_ids?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_squads_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string
@@ -78,10 +218,12 @@ export type Database = {
           ends_at: string | null
           home_away: Database["public"]["Enums"]["home_away"] | null
           id: string
+          is_cancelled: boolean
           location: string | null
           location_url: string | null
           meetup_at: string | null
           opponent: string | null
+          series_id: string | null
           starts_at: string
           team_id: string
           title: string
@@ -94,10 +236,12 @@ export type Database = {
           ends_at?: string | null
           home_away?: Database["public"]["Enums"]["home_away"] | null
           id?: string
+          is_cancelled?: boolean
           location?: string | null
           location_url?: string | null
           meetup_at?: string | null
           opponent?: string | null
+          series_id?: string | null
           starts_at: string
           team_id: string
           title: string
@@ -110,16 +254,25 @@ export type Database = {
           ends_at?: string | null
           home_away?: Database["public"]["Enums"]["home_away"] | null
           id?: string
+          is_cancelled?: boolean
           location?: string | null
           location_url?: string | null
           meetup_at?: string | null
           opponent?: string | null
+          series_id?: string | null
           starts_at?: string
           team_id?: string
           title?: string
           type?: Database["public"]["Enums"]["event_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "events_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "event_series"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_team_id_fkey"
             columns: ["team_id"]
@@ -177,6 +330,7 @@ export type Database = {
       notifications: {
         Row: {
           body: string | null
+          club_id: string | null
           created_at: string
           id: string
           link: string | null
@@ -187,6 +341,7 @@ export type Database = {
         }
         Insert: {
           body?: string | null
+          club_id?: string | null
           created_at?: string
           id?: string
           link?: string | null
@@ -197,6 +352,7 @@ export type Database = {
         }
         Update: {
           body?: string | null
+          club_id?: string | null
           created_at?: string
           id?: string
           link?: string | null
@@ -205,7 +361,15 @@ export type Database = {
           type?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifications_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_assignments: {
         Row: {
@@ -292,6 +456,76 @@ export type Database = {
           },
           {
             foreignKeyName: "payment_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poll_votes: {
+        Row: {
+          created_at: string
+          id: string
+          option_index: number
+          poll_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_index: number
+          poll_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_index?: number
+          poll_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      polls: {
+        Row: {
+          author_id: string
+          closes_at: string | null
+          created_at: string
+          id: string
+          options: Json
+          question: string
+          team_id: string
+        }
+        Insert: {
+          author_id: string
+          closes_at?: string | null
+          created_at?: string
+          id?: string
+          options: Json
+          question: string
+          team_id: string
+        }
+        Update: {
+          author_id?: string
+          closes_at?: string | null
+          created_at?: string
+          id?: string
+          options?: Json
+          question?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "polls_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -459,6 +693,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      event_series_team_id: { Args: { _series_id: string }; Returns: string }
       event_team_id: { Args: { _event_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -477,6 +712,8 @@ export type Database = {
         Returns: boolean
       }
       payment_request_team_id: { Args: { _req_id: string }; Returns: string }
+      poll_team_id: { Args: { _poll_id: string }; Returns: string }
+      rotate_calendar_token: { Args: never; Returns: string }
       team_club_id: { Args: { _team_id: string }; Returns: string }
     }
     Enums: {
@@ -610,6 +847,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "player"],

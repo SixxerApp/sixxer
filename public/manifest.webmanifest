@@ -1,0 +1,37 @@
+{
+  "name": "Sixxer",
+  "short_name": "Sixxer",
+  "description": "Cricket team management for clubs, captains, and players.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1415",
+  "theme_color": "#0f1415",
+  "icons": [
+    {
+      "src": "/icons/app-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/app-icon-maskable.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Home",
+      "short_name": "Home",
+      "url": "/home"
+    },
+    {
+      "name": "Groups",
+      "short_name": "Groups",
+      "url": "/groups"
+    }
+  ]
+}

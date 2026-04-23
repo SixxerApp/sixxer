@@ -1,4 +1,5 @@
 import * as React from "react";
+import { platformServices } from "@/platform";
 
 type Theme = "dark" | "light";
 
@@ -12,27 +13,20 @@ const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 
 const STORAGE_KEY = "cricket-theme";
 
-function applyTheme(t: Theme) {
-  if (typeof document === "undefined") return;
-  const root = document.documentElement;
-  root.classList.toggle("dark", t === "dark");
-  root.style.colorScheme = t;
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = React.useState<Theme>("dark");
 
   React.useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
+    const stored = platformServices.storage.getItem(STORAGE_KEY) as Theme | null;
     const initial: Theme = stored ?? "dark";
     setThemeState(initial);
-    applyTheme(initial);
+    platformServices.ui.applyTheme(initial);
   }, []);
 
   const setTheme = React.useCallback((t: Theme) => {
     setThemeState(t);
-    applyTheme(t);
-    localStorage.setItem(STORAGE_KEY, t);
+    platformServices.ui.applyTheme(t);
+    platformServices.storage.setItem(STORAGE_KEY, t);
   }, []);
 
   const toggle = React.useCallback(() => {

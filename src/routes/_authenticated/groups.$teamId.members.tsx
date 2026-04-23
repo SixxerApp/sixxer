@@ -1,114 +1,46 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { Copy, UserPlus } from "lucide-react";
-import * as React from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useTeamContext } from "@/lib/team-context";
 import { InitialAvatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
-import { generateInviteCode } from "@/lib/format";
+import { useTeamMembers } from "@/features/teams/use-team-members";
+import { usePlatform } from "@/platform";
 
 export const Route = createFileRoute("/_authenticated/groups/$teamId/members")({
   component: MembersTab,
 });
 
-interface Member {
-  user_id: string;
-  full_name: string;
-  is_admin: boolean;
-}
-
 function MembersTab() {
   const { teamId } = useParams({ from: "/_authenticated/groups/$teamId/members" });
   const { user } = useAuth();
   const { data: ctx } = useTeamContext(teamId, user?.id);
-  const [members, setMembers] = React.useState<Member[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [activeCode, setActiveCode] = React.useState<string | null>(null);
-  const [creating, setCreating] = React.useState(false);
+  const platform = usePlatform();
+  const { members, activeCode, loading, creating, createInvite } = useTeamMembers({
+    teamId,
+    clubId: ctx?.club.id,
+    userId: user?.id,
+    isAdmin: !!ctx?.isAdmin,
+  });
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    const { data: tm } = await supabase
-      .from("team_members")
-      .select("user_id")
-      .eq("team_id", teamId);
-    const ids = (tm ?? []).map((m) => m.user_id);
-    if (ids.length === 0) {
-      setMembers([]);
-      setLoading(false);
-      return;
-    }
-    const { data: profs } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .in("id", ids);
-    let admins: string[] = [];
-    if (ctx) {
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id, role")
-        .eq("club_id", ctx.club.id)
-        .eq("role", "admin");
-      admins = (roles ?? []).map((r) => r.user_id);
-    }
-    setMembers(
-      (profs ?? []).map((p) => ({
-        user_id: p.id,
-        full_name: p.full_name,
-        is_admin: admins.includes(p.id),
-      })),
-    );
-    setLoading(false);
-  }, [teamId, ctx]);
-
-  React.useEffect(() => {
-    void load();
-    if (ctx?.isAdmin) {
-      // load most recent active invite if any
-      (async () => {
-        const { data } = await supabase
-          .from("invites")
-          .select("code")
-          .eq("club_id", ctx.club.id)
-          .order("created_at", { ascending: false })
-          .limit(1);
-        if (data && data[0]) setActiveCode(data[0].code);
-      })();
-    }
-  }, [load, ctx]);
-
-  async function createInvite() {
-    if (!user || !ctx) return;
-    setCreating(true);
-    const code = generateInviteCode();
-    const expires = new Date();
-    expires.setDate(expires.getDate() + 14);
-    const { data, error } = await supabase
-      .from("invites")
-      .insert({
-        club_id: ctx.club.id,
-        team_id: teamId,
-        code,
-        created_by: user.id,
-        expires_at: expires.toISOString(),
-      })
-      .select("code")
-      .single();
-    setCreating(false);
+  async function handleCreateInvite() {
+    const { error, data } = await createInvite();
     if (error || !data) {
       toast.error(error?.message ?? "Could not create invite");
       return;
     }
-    setActiveCode(data.code);
     toast.success("Invite code ready");
   }
 
-  function copyCode() {
+  async function copyCode() {
     if (!activeCode) return;
-    void navigator.clipboard.writeText(activeCode);
-    toast.success("Code copied");
+    try {
+      await platform.clipboard.writeText(activeCode);
+      toast.success("Code copied");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not copy code");
+    }
   }
 
   return (
@@ -133,7 +65,7 @@ function MembersTab() {
             </div>
           ) : (
             <button
-              onClick={createInvite}
+              onClick={handleCreateInvite}
               disabled={creating}
               className="mt-3 inline-flex h-10 items-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground"
             >
@@ -147,7 +79,7 @@ function MembersTab() {
           )}
           {activeCode && (
             <button
-              onClick={createInvite}
+              onClick={handleCreateInvite}
               disabled={creating}
               className="mt-2 text-xs font-semibold text-primary hover:underline"
             >

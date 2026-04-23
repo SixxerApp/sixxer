@@ -1,134 +1,45 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import * as React from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
 import { InitialAvatar } from "@/components/Avatar";
 import { formatMoney, formatRelativeDay } from "@/lib/format";
+import { usePaymentDetail } from "@/features/payments/use-payment-detail";
+import { usePlatform } from "@/platform";
 import { StatusChip } from "./groups.$teamId.payments";
 
 export const Route = createFileRoute("/_authenticated/payments/$paymentId")({
   component: PaymentDetail,
 });
 
-interface RequestRow {
-  id: string;
-  team_id: string;
-  title: string;
-  amount_cents: number;
-  currency: string;
-  due_at: string | null;
-  description: string | null;
-}
-
-interface AssignmentRow {
-  id: string;
-  user_id: string;
-  status: "unpaid" | "marked_paid" | "confirmed" | "rejected";
-  note: string | null;
-  full_name: string;
-}
-
 function PaymentDetail() {
   const { paymentId } = useParams({ from: "/_authenticated/payments/$paymentId" });
   const { user } = useAuth();
-  const [req, setReq] = React.useState<RequestRow | null>(null);
-  const [isAdmin, setIsAdmin] = React.useState(false);
-  const [assignments, setAssignments] = React.useState<AssignmentRow[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [busy, setBusy] = React.useState(false);
+  const platform = usePlatform();
+  const {
+    request: req,
+    isAdmin,
+    assignments,
+    loading,
+    busy,
+    markPaid: submitMarkPaid,
+    updateStatus,
+  } = usePaymentDetail(paymentId, user?.id);
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    const { data: r } = await supabase
-      .from("payment_requests")
-      .select("*")
-      .eq("id", paymentId)
-      .maybeSingle();
-    if (!r) {
-      setLoading(false);
-      return;
-    }
-    setReq(r as RequestRow);
-    if (user) {
-      const { data: team } = await supabase
-        .from("teams")
-        .select("club_id")
-        .eq("id", r.team_id)
-        .maybeSingle();
-      if (team) {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .eq("club_id", team.club_id)
-          .eq("role", "admin");
-        setIsAdmin((roles ?? []).length > 0);
-      }
-    }
-    const { data: assigns } = await supabase
-      .from("payment_assignments")
-      .select("id, user_id, status, note")
-      .eq("request_id", paymentId);
-    const ids = (assigns ?? []).map((a) => a.user_id);
-    const names: Record<string, string> = {};
-    if (ids.length) {
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", ids);
-      for (const p of profs ?? []) names[p.id] = p.full_name;
-    }
-    setAssignments(
-      (assigns ?? []).map((a) => ({
-        id: a.id,
-        user_id: a.user_id,
-        status: a.status,
-        note: a.note,
-        full_name: names[a.user_id] ?? "Member",
-      })),
-    );
-    setLoading(false);
-  }, [paymentId, user]);
-
-  React.useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function markPaid() {
+  async function handleMarkPaid() {
     if (!user) return;
-    const note = window.prompt("Add a note (e.g. 'paid cash to captain') — optional", "");
-    setBusy(true);
-    const { error } = await supabase
-      .from("payment_assignments")
-      .update({
-        status: "marked_paid",
-        note: note || null,
-        marked_paid_at: new Date().toISOString(),
-      })
-      .eq("request_id", paymentId)
-      .eq("user_id", user.id);
-    setBusy(false);
+    const note = await platform.dialogs.prompt(
+      "Add a note (e.g. 'paid cash to captain') — optional",
+      "",
+    );
+    const { error } = await submitMarkPaid(note || null);
     if (error) toast.error(error.message);
-    else {
-      toast.success("Marked as paid");
-      void load();
-    }
+    else toast.success("Marked as paid");
   }
 
   async function adminUpdate(assignmentId: string, status: "confirmed" | "rejected" | "unpaid") {
-    setBusy(true);
-    const { error } = await supabase
-      .from("payment_assignments")
-      .update({
-        status,
-        confirmed_at: status === "confirmed" ? new Date().toISOString() : null,
-      })
-      .eq("id", assignmentId);
-    setBusy(false);
+    const { error } = await updateStatus(assignmentId, status);
     if (error) toast.error(error.message);
-    else void load();
   }
 
   if (loading) {
@@ -167,9 +78,10 @@ function PaymentDetail() {
         <p className="mt-3 text-3xl font-extrabold text-primary">
           {formatMoney(req.amount_cents, req.currency)}
         </p>
-        {req.description && (
-          <p className="mt-3 text-sm text-muted-foreground">{req.description}</p>
-        )}
+        <p className="mt-2 text-sm text-muted-foreground">
+          {isAdmin ? "Requested by" : "Pay to"} {req.requested_by_name} · {req.team_name}
+        </p>
+        {req.description && <p className="mt-3 text-sm text-muted-foreground">{req.description}</p>}
       </div>
 
       {!isAdmin && me && (
@@ -180,7 +92,7 @@ function PaymentDetail() {
           </div>
           {me.status === "unpaid" && (
             <button
-              onClick={markPaid}
+              onClick={handleMarkPaid}
               disabled={busy}
               className="h-11 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground"
             >
@@ -199,7 +111,7 @@ function PaymentDetail() {
           )}
           {me.status === "rejected" && (
             <button
-              onClick={markPaid}
+              onClick={handleMarkPaid}
               disabled={busy}
               className="h-11 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground"
             >

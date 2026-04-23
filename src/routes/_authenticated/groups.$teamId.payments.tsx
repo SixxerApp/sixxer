@@ -138,7 +138,11 @@ function PaymentsTab() {
   );
 }
 
-export function StatusChip({ status }: { status: "unpaid" | "marked_paid" | "confirmed" | "rejected" }) {
+export function StatusChip({
+  status,
+}: {
+  status: "unpaid" | "marked_paid" | "confirmed" | "rejected";
+}) {
   const map = {
     unpaid: { label: "Unpaid", cls: "bg-destructive/15 text-destructive" },
     marked_paid: { label: "Pending", cls: "bg-warning/15 text-warning-foreground" },
