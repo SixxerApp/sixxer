@@ -1,13 +1,20 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import {
   BellRing,
-  Calendar,
+  CalendarDays,
+  CalendarPlus,
   Check,
+  ChevronDown,
+  ChevronUp,
   Clock,
+  ExternalLink,
   HelpCircle,
   MapPin,
   Megaphone,
+  Navigation,
+  Radio,
   Repeat,
+  Share2,
   Undo2,
   X,
 } from "lucide-react";
@@ -15,9 +22,13 @@ import type { ReactNode } from "react";
 import * as React from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { usePlatform } from "@/platform";
 import { PageHeader } from "@/components/PageHeader";
 import { InitialAvatar } from "@/components/Avatar";
 import { formatDate, formatTime } from "@/lib/format";
+import { buildMapTargets, preferredMapLink } from "@/lib/maps";
+import { buildSingleEventIcs, downloadIcs } from "@/lib/ics-single";
+import { buildEventShareText, whatsAppShareUrl } from "@/lib/share";
 import { useEventAdmin } from "@/features/events/use-event-admin";
 import { type ResponseRow, useEventDetail } from "@/features/events/use-event-detail";
 import {
@@ -25,6 +36,7 @@ import {
   cancelSeriesFromDate,
   restoreEventInstance,
 } from "@/features/events/use-event-series";
+import { useWeather } from "@/features/events/use-weather";
 
 export const Route = createFileRoute("/_authenticated/events/$eventId")({
   component: EventDetail,
@@ -33,11 +45,14 @@ export const Route = createFileRoute("/_authenticated/events/$eventId")({
 function EventDetail() {
   const { eventId } = useParams({ from: "/_authenticated/events/$eventId" });
   const { user } = useAuth();
+  const platform = usePlatform();
   const { event, responses, loading, updating, rsvp, reload } = useEventDetail(eventId, user?.id);
   const admin = useEventAdmin(eventId, user?.id);
+  const weather = useWeather(event?.location ?? null, event?.starts_at ?? null);
   const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
   const [announcementMessage, setAnnouncementMessage] = React.useState("");
   const [seriesBusy, setSeriesBusy] = React.useState(false);
+  const [responsesExpanded, setResponsesExpanded] = React.useState(false);
 
   async function handleRsvp(status: "going" | "maybe" | "declined") {
     const { error } = await rsvp(status);
@@ -116,6 +131,45 @@ function EventDetail() {
     await reload();
   }
 
+  async function handleAddToCalendar() {
+    if (!event) return;
+    const ics = buildSingleEventIcs(
+      {
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        location: event.location,
+        startsAt: event.starts_at,
+        endsAt: event.ends_at,
+        type: event.type,
+      },
+      typeof window !== "undefined" ? window.location.origin : "",
+    );
+    const safeTitle = event.title.replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 40) || "event";
+    downloadIcs(`sixxer-${safeTitle}.ics`, ics);
+  }
+
+  async function handleShareWhatsApp() {
+    if (!event) return;
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const when = `${formatDate(event.starts_at)} · ${formatTime(event.starts_at)}`;
+    const shareText = buildEventShareText({
+      title: event.title,
+      when,
+      where: event.location,
+      url: `${origin}/events/${event.id}`,
+    });
+    const shareUrl = whatsAppShareUrl(shareText);
+    try {
+      await platform.clipboard.writeText(shareText);
+    } catch {
+      // Clipboard failures are non-fatal — the deep link still opens WhatsApp.
+    }
+    if (typeof window !== "undefined") {
+      window.open(shareUrl, "_blank", "noopener,noreferrer");
+    }
+  }
+
   async function handleCancelSeriesFromHere() {
     if (!event?.series_id) return;
     const confirmed =
@@ -155,6 +209,9 @@ function EventDetail() {
   const going = responses.filter((r) => r.status === "going");
   const maybe = responses.filter((r) => r.status === "maybe");
   const declined = responses.filter((r) => r.status === "declined");
+  const mapTargets = buildMapTargets(event.location, event.location_url);
+  const mapHref = mapTargets ? preferredMapLink(mapTargets) : null;
+  const rsvpBy = new Date(new Date(event.starts_at).getTime() - 12 * 60 * 60_000);
 
   return (
     <div className="px-5 pb-8">
@@ -182,7 +239,7 @@ function EventDetail() {
       </section>
 
       <section className="mt-4 space-y-2 rounded-2xl border border-border bg-card p-4 text-sm">
-        <Detail icon={<Calendar className="h-4 w-4" />}>
+        <Detail icon={<CalendarDays className="h-4 w-4" />}>
           {formatDate(event.starts_at)} · {formatTime(event.starts_at)}
           {event.ends_at && ` – ${formatTime(event.ends_at)}`}
         </Detail>
@@ -191,7 +248,31 @@ function EventDetail() {
             Meet at {formatTime(event.meetup_at)}
           </Detail>
         )}
-        {event.location && <Detail icon={<MapPin className="h-4 w-4" />}>{event.location}</Detail>}
+        {event.location && (
+          <Detail icon={<MapPin className="h-4 w-4" />}>
+            {mapHref ? (
+              <a
+                href={mapHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                {event.location}
+                <Navigation className="h-3.5 w-3.5 text-muted-foreground" />
+              </a>
+            ) : (
+              event.location
+            )}
+          </Detail>
+        )}
+        {weather && (
+          <Detail icon={<span className="text-base leading-none">{weather.icon}</span>}>
+            <span className="text-foreground">
+              {Math.round(weather.tempMinC)}° – {Math.round(weather.tempMaxC)}°C
+            </span>
+            <span className="text-muted-foreground"> · {weather.precipChance}% rain</span>
+          </Detail>
+        )}
         {event.series_id && (
           <Detail icon={<Repeat className="h-4 w-4" />}>
             <span className="text-muted-foreground">Part of a recurring series</span>
@@ -200,6 +281,38 @@ function EventDetail() {
         {event.description && (
           <p className="pt-2 text-sm leading-relaxed text-muted-foreground">{event.description}</p>
         )}
+      </section>
+
+      {event.scoring_url && (
+        <a
+          href={event.scoring_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-3 text-sm"
+        >
+          <span className="flex items-center gap-2 font-semibold text-primary">
+            <Radio className="h-4 w-4" />
+            Watch live
+          </span>
+          <ExternalLink className="h-4 w-4 text-primary" />
+        </a>
+      )}
+
+      <section className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          onClick={handleAddToCalendar}
+          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-border bg-card text-xs font-semibold"
+        >
+          <CalendarPlus className="h-4 w-4" />
+          Add to calendar
+        </button>
+        <button
+          onClick={handleShareWhatsApp}
+          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-border bg-card text-xs font-semibold"
+        >
+          <Share2 className="h-4 w-4" />
+          Share
+        </button>
       </section>
 
       {event.is_cancelled && (
@@ -221,9 +334,14 @@ function EventDetail() {
       )}
 
       <section className="mt-5">
-        <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-          Are you in?
-        </h2>
+        <div className="mb-2 flex items-baseline justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Are you in?
+          </h2>
+          <span className="text-[11px] text-muted-foreground">
+            RSVP by {formatDate(rsvpBy.toISOString())} · {formatTime(rsvpBy.toISOString())}
+          </span>
+        </div>
         <div className="grid grid-cols-3 gap-2">
           <RsvpButton
             label="Going"
@@ -252,10 +370,33 @@ function EventDetail() {
         </div>
       </section>
 
-      <section className="mt-6 space-y-4">
-        <ResponseGroup label={`Going (${going.length})`} items={going} tone="success" />
-        <ResponseGroup label={`Maybe (${maybe.length})`} items={maybe} tone="warning" />
-        <ResponseGroup label={`Can't (${declined.length})`} items={declined} tone="destructive" />
+      <section className="mt-6">
+        <button
+          onClick={() => setResponsesExpanded((v) => !v)}
+          className="flex w-full items-center justify-between rounded-2xl border border-border bg-card p-3 text-sm"
+        >
+          <span className="flex items-center gap-3">
+            <CountPill label="Going" count={going.length} tone="success" />
+            <CountPill label="Maybe" count={maybe.length} tone="warning" />
+            <CountPill label="Can't" count={declined.length} tone="destructive" />
+          </span>
+          {responsesExpanded ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+        {responsesExpanded && (
+          <div className="mt-4 space-y-4">
+            <ResponseGroup label={`Going (${going.length})`} items={going} tone="success" />
+            <ResponseGroup label={`Maybe (${maybe.length})`} items={maybe} tone="warning" />
+            <ResponseGroup
+              label={`Can't (${declined.length})`}
+              items={declined}
+              tone="destructive"
+            />
+          </div>
+        )}
       </section>
 
       {admin.isAdmin && (
@@ -425,6 +566,29 @@ function RsvpButton({
       {icon}
       {label}
     </button>
+  );
+}
+
+function CountPill({
+  label,
+  count,
+  tone,
+}: {
+  label: string;
+  count: number;
+  tone: "success" | "warning" | "destructive";
+}) {
+  const dot = {
+    success: "bg-success",
+    warning: "bg-warning",
+    destructive: "bg-destructive",
+  }[tone];
+  return (
+    <span className="flex items-center gap-1.5 text-xs">
+      <span className={"h-2 w-2 rounded-full " + dot} />
+      <span className="font-semibold text-foreground">{count}</span>
+      <span className="text-muted-foreground">{label}</span>
+    </span>
   );
 }
 

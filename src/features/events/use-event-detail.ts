@@ -12,9 +12,11 @@ export interface EventRow {
   meetup_at: string | null;
   ends_at: string | null;
   location: string | null;
+  location_url: string | null;
   description: string | null;
   series_id: string | null;
   is_cancelled: boolean;
+  scoring_url: string | null;
 }
 
 export interface ResponseRow {
@@ -91,11 +93,19 @@ export function useEventDetail(eventId: string, userId: string | undefined) {
     async (status: "going" | "maybe" | "declined") => {
       if (!userId) return { error: new Error("Missing user") };
       setUpdating(true);
+      // Optimistic — flip the local row immediately so the button state doesn't
+      // flash "Going" → idle → "Going" on slow networks. If the write fails we
+      // reload from the server to snap back to truth.
+      setResponses((current) => {
+        const existing = current.find((row) => row.user_id === userId);
+        if (existing) {
+          return current.map((row) => (row.user_id === userId ? { ...row, status } : row));
+        }
+        return [...current, { user_id: userId, status, full_name: "You" }];
+      });
       const result = await respondToEvent(eventId, userId, status);
       setUpdating(false);
-      if (!result.error) {
-        await load();
-      }
+      await load();
       return result;
     },
     [eventId, load, userId],

@@ -52,6 +52,8 @@ function NewEventPage() {
   const [meetupAt, setMeetupAt] = React.useState("");
   const [endsAt, setEndsAt] = React.useState("");
   const [location, setLocation] = React.useState("");
+  const [locationUrl, setLocationUrl] = React.useState("");
+  const [scoringUrl, setScoringUrl] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -123,12 +125,13 @@ function NewEventPage() {
         durationMinutes: duration,
         meetupOffsetMinutes: meetupOffset,
         location: location || null,
-        locationUrl: null,
+        locationUrl: locationUrl.trim() || null,
         description: description || null,
         createdBy: user.id,
         recurrence: { freq: repeat, interval: intervalNum, count: countNum },
         opponent: type === "match" ? opponent || null : null,
         homeAway: type === "match" ? homeAway : null,
+        scoringUrl: type === "match" ? scoringUrl.trim() || null : null,
       });
 
       setSubmitting(false);
@@ -153,6 +156,8 @@ function NewEventPage() {
         meetup_at: meetupDate?.toISOString() ?? null,
         ends_at: endsAtDate?.toISOString() ?? null,
         location: location || null,
+        location_url: locationUrl.trim() || null,
+        scoring_url: type === "match" ? scoringUrl.trim() || null : null,
         description: description || null,
         created_by: user.id,
       })
@@ -276,6 +281,42 @@ function NewEventPage() {
             maxLength={200}
           />
         </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="location-url">
+            Map link <span className="text-muted-foreground">(optional)</span>
+          </Label>
+          <Input
+            id="location-url"
+            type="url"
+            value={locationUrl}
+            onChange={(e) => setLocationUrl(e.target.value)}
+            placeholder="https://maps.app.goo.gl/…"
+            maxLength={500}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Paste a Google Maps or Apple Maps share link. If empty we'll search the location text.
+          </p>
+        </div>
+
+        {type === "match" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="scoring-url">
+              Live scoring link <span className="text-muted-foreground">(optional)</span>
+            </Label>
+            <Input
+              id="scoring-url"
+              type="url"
+              value={scoringUrl}
+              onChange={(e) => setScoringUrl(e.target.value)}
+              placeholder="https://cricclubs.com/…"
+              maxLength={500}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Shows up as a "Watch live" button on the match page.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <Label htmlFor="desc">Notes</Label>

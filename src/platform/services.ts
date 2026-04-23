@@ -253,56 +253,73 @@ function parseNotificationPath(data: unknown): string | null {
   return typeof path === "string" && path.startsWith("/") ? path : null;
 }
 
+// Capacitor's PermissionState includes "prompt" / "prompt-with-rationale" which
+// map conceptually to the browser's "default" (not yet granted or denied).
+// Collapse them at the boundary so the rest of the app only deals with our
+// narrower NotificationPermissionState union.
+function normalizePermissionState(state: string): NotificationPermissionState {
+  if (state === "granted" || state === "denied" || state === "unsupported") return state;
+  return "default";
+}
+
 const notifications: NotificationService = {
   async getPermissionStatus() {
     const nativePush = await getNativePushModule();
     if (nativePush) {
       const permissions = await nativePush.checkPermissions();
-      return permissions.receive;
+      return normalizePermissionState(permissions.receive);
     }
 
     if (!canUseDom() || typeof Notification === "undefined") {
       return "unsupported";
     }
 
-    return Notification.permission;
+    return normalizePermissionState(Notification.permission);
   },
   async requestPermission() {
     const nativePush = await getNativePushModule();
     if (nativePush) {
       const permissions = await nativePush.requestPermissions();
-      return permissions.receive;
+      return normalizePermissionState(permissions.receive);
     }
 
     if (!canUseDom() || typeof Notification === "undefined") {
       return "unsupported";
     }
 
-    return Notification.requestPermission();
+    return normalizePermissionState(await Notification.requestPermission());
   },
   async register() {
     const nativePush = await getNativePushModule();
     if (!nativePush) return null;
 
-    await nativePush.register();
-
-    return new Promise<string | null>((resolve) => {
-      let settled = false;
-      const settle = async (token: string | null) => {
-        if (settled) return;
-        settled = true;
-        await registrationHandle.remove();
-        await errorHandle.remove();
-        resolve(token);
-      };
-
-      const registrationHandle = nativePush.addListener("registration", (token) => {
-        void settle(token.value);
-      });
-      const errorHandle = nativePush.addListener("registrationError", () => {
-        void settle(null);
-      });
+    // Wire up the listener promise BEFORE calling register(), otherwise the
+    // token event can arrive while we're still awaiting addListener and we'll
+    // miss it. Capacitor's addListener returns a Promise<PluginListenerHandle>,
+    // so we have to await the handles before calling .remove() on them.
+    let settled = false;
+    let resolve: (token: string | null) => void = () => {};
+    const done = new Promise<string | null>((r) => {
+      resolve = r;
     });
+
+    const registrationHandle = await nativePush.addListener("registration", (token) => {
+      if (settled) return;
+      settled = true;
+      void registrationHandle.remove();
+      void errorHandle.remove();
+      resolve(token.value);
+    });
+    const errorHandle = await nativePush.addListener("registrationError", () => {
+      if (settled) return;
+      settled = true;
+      void registrationHandle.remove();
+      void errorHandle.remove();
+      resolve(null);
+    });
+
+    await nativePush.register();
+    return done;
   },
   async addOpenListener(listener) {
     const nativePush = await getNativePushModule();

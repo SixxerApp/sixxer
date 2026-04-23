@@ -86,10 +86,10 @@ async function fetchPaymentDetail(paymentId: string, userId: string | undefined)
 
   return {
     request: {
-      ...(request as PaymentRequestRow),
+      ...request,
       team_name: teamName,
       requested_by_name: requestedByName,
-    },
+    } satisfies PaymentRequestRow,
     assignments: (assignmentRows ?? []).map((row) => ({
       id: row.id,
       user_id: row.user_id,

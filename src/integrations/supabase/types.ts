@@ -127,6 +127,7 @@ export type Database = {
           location_url: string | null
           meetup_offset_minutes: number | null
           rrule: string
+          scoring_url: string | null
           starts_at: string
           team_id: string
           title: string
@@ -143,6 +144,7 @@ export type Database = {
           location_url?: string | null
           meetup_offset_minutes?: number | null
           rrule: string
+          scoring_url?: string | null
           starts_at: string
           team_id: string
           title: string
@@ -159,6 +161,7 @@ export type Database = {
           location_url?: string | null
           meetup_offset_minutes?: number | null
           rrule?: string
+          scoring_url?: string | null
           starts_at?: string
           team_id?: string
           title?: string
@@ -223,6 +226,7 @@ export type Database = {
           location_url: string | null
           meetup_at: string | null
           opponent: string | null
+          scoring_url: string | null
           series_id: string | null
           starts_at: string
           team_id: string
@@ -241,6 +245,7 @@ export type Database = {
           location_url?: string | null
           meetup_at?: string | null
           opponent?: string | null
+          scoring_url?: string | null
           series_id?: string | null
           starts_at: string
           team_id: string
@@ -259,6 +264,7 @@ export type Database = {
           location_url?: string | null
           meetup_at?: string | null
           opponent?: string | null
+          scoring_url?: string | null
           series_id?: string | null
           starts_at?: string
           team_id?: string

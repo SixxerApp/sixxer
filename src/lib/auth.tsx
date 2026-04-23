@@ -43,16 +43,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
+    // onResume can return its cleanup either synchronously (web/visibility) or
+    // async (native Capacitor). Normalise to a promise so the .then wiring is
+    // type-safe for both shapes.
     let disposeResume: (() => void) | undefined;
-    void platformServices.app
-      .onResume(() => {
+    void Promise.resolve(
+      platformServices.app.onResume(() => {
         void getExistingSession().then((existing) => {
           syncSession(existing);
         });
-      })
-      .then((cleanup) => {
-        disposeResume = cleanup;
-      });
+      }),
+    ).then((cleanup) => {
+      disposeResume = cleanup;
+    });
 
     return () => {
       sub.subscription.unsubscribe();

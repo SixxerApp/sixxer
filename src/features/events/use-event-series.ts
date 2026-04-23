@@ -16,6 +16,7 @@ export interface EventSeriesInput {
   // Match-specific fields, copied onto each generated event row.
   opponent?: string | null;
   homeAway?: "home" | "away" | null;
+  scoringUrl?: string | null;
 }
 
 export interface SeriesCreateResult {
@@ -47,6 +48,7 @@ export async function createEventSeries(input: EventSeriesInput): Promise<Series
       rrule,
       starts_at: input.startsAt.toISOString(),
       created_by: input.createdBy,
+      scoring_url: input.scoringUrl ?? null,
     })
     .select("id")
     .single();
@@ -78,6 +80,7 @@ export async function createEventSeries(input: EventSeriesInput): Promise<Series
     location: input.location,
     location_url: input.locationUrl,
     description: input.description,
+    scoring_url: input.scoringUrl ?? null,
     created_by: input.createdBy,
   }));
 
