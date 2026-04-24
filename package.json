@@ -16,7 +16,10 @@
     "cap:android": "npx cap open android",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "seed:dev": "node ./scripts/seed-dev.mjs"
+    "seed:dev": "node ./scripts/seed-dev.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",
@@ -86,10 +89,12 @@
     "@capacitor/cli": "^8.3.1",
     "@capacitor/ios": "^8.3.1",
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.59.1",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",
+    "dotenv": "^17.4.2",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",

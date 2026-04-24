@@ -26,6 +26,12 @@ export interface ResponseRow {
 }
 
 async function fetchEventDetail(eventId: string) {
+  // `load()` can run in the first client tick before the Supabase client has
+  // fully restored the JWT from storage. RLS on `event_responses` is anonymous
+  // for that request, so the list comes back empty and never updates unless we
+  // refetch (see onAuthStateChange below).
+  await supabase.auth.getSession();
+
   const { data: event } = await supabase.from("events").select("*").eq("id", eventId).maybeSingle();
   if (!event) {
     return { event: null, responses: [] as ResponseRow[] };
@@ -87,6 +93,16 @@ export function useEventDetail(eventId: string, userId: string | undefined) {
 
   React.useEffect(() => {
     void load();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+        void load();
+      }
+    });
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [load]);
 
   const rsvp = React.useCallback(
@@ -104,9 +120,16 @@ export function useEventDetail(eventId: string, userId: string | undefined) {
         return [...current, { user_id: userId, status, full_name: "You" }];
       });
       const result = await respondToEvent(eventId, userId, status);
-      setUpdating(false);
-      await load();
-      return result;
+      // Keep `updating` true (buttons disabled) until the refetch from `load()` —
+      // otherwise the UI can show a server-backed count of 1 from optimistic
+      // state *before* the upsert + GET round trip finishes, and a fast E2E
+      // `reload()` can run between the two.
+      try {
+        await load();
+        return result;
+      } finally {
+        setUpdating(false);
+      }
     },
     [eventId, load, userId],
   );

@@ -554,6 +554,8 @@ function RsvpButton({
   } as const;
   return (
     <button
+      type="button"
+      aria-pressed={active}
       onClick={onClick}
       disabled={disabled}
       className={
