@@ -14,5 +14,6 @@ export const SEED = {
   },
   teamB: { name: "Test CC 2nd XI" },
   seededMatchOpponent: "Hawks CC",
+  seededTeamBOpponent: "Falcons CC",
   seededPaymentTitle: "Match fee — Hawks CC",
 } as const;

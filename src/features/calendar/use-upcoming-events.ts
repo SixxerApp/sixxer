@@ -1,5 +1,6 @@
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchVisibleTeamsForUser } from "@/features/teams/visible-teams";
 
 export interface CalendarEvent {
   id: string;
@@ -25,19 +26,11 @@ export interface CalendarDay {
 export const CALENDAR_WINDOW_DAYS = 30;
 
 async function fetchUpcoming(userId: string): Promise<CalendarEvent[]> {
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id, teams:team_id(id, name)")
-    .eq("user_id", userId);
-
+  const visibleTeams = await fetchVisibleTeamsForUser(userId);
   const teamNames: Record<string, string> = {};
-  const teamIds: string[] = [];
-  for (const row of memberships ?? []) {
-    const team = row.teams as { id: string; name: string } | null;
-    if (team) {
-      teamIds.push(team.id);
-      teamNames[team.id] = team.name;
-    }
+  const teamIds = visibleTeams.map((team) => team.id);
+  for (const team of visibleTeams) {
+    teamNames[team.id] = team.name;
   }
   if (teamIds.length === 0) return [];
 

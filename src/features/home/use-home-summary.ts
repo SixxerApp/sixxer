@@ -1,5 +1,6 @@
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchVisibleTeamsForUser } from "@/features/teams/visible-teams";
 
 export interface UpcomingEvent {
   id: string;
@@ -46,16 +47,11 @@ async function fetchHomeSummary(userId: string, fallbackName?: string): Promise<
     .eq("id", userId)
     .maybeSingle();
 
-  const { data: teamMemberships } = await supabase
-    .from("team_members")
-    .select("team_id, teams:team_id(id, name)")
-    .eq("user_id", userId);
-
-  const teamIds = (teamMemberships ?? []).map((row) => row.team_id);
+  const visibleTeams = await fetchVisibleTeamsForUser(userId);
+  const teamIds = visibleTeams.map((team) => team.id);
   const teamNames: Record<string, string> = {};
-  for (const row of teamMemberships ?? []) {
-    const team = row.teams as { id: string; name: string } | null;
-    if (team) teamNames[team.id] = team.name;
+  for (const team of visibleTeams) {
+    teamNames[team.id] = team.name;
   }
 
   let events: UpcomingEvent[] = [];

@@ -14,4 +14,5 @@ test("calendar tab renders upcoming events and the subscribe card", async ({ pag
   // to "Copy URL". Either label counts as the card rendering.
   const subscribeCta = page.getByRole("button", { name: /enable|copy url/i }).first();
   await expect(subscribeCta).toBeVisible();
+  await expect(page.getByText(new RegExp(`@ ${SEED.seededTeamBOpponent}`, "i"))).toHaveCount(0);
 });
