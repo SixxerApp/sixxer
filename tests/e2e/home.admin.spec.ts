@@ -23,4 +23,21 @@ test.describe("admin home", () => {
       }),
     ).toBeVisible();
   });
+
+  test("shows upcoming events from administered teams", async ({ page }) => {
+    await page.goto("/home");
+
+    await expect(
+      page
+        .getByRole("link")
+        .filter({ hasText: new RegExp(`vs ${SEED.seededMatchOpponent}`, "i") })
+        .first(),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page
+        .getByRole("link")
+        .filter({ hasText: new RegExp(`@ ${SEED.seededTeamBOpponent}`, "i") })
+        .first(),
+    ).toBeVisible();
+  });
 });
