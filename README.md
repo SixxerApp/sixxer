@@ -155,6 +155,13 @@ need a clean slate.
 - `npm run build` currently passes.
 - `npm run lint` still reports a backlog of existing formatting issues in the repo.
 
+## AI contributors
+
+Start with `AGENTS.md`. It is the canonical guide for Codex, Cursor, Claude
+Code, Gemini, and Copilot. `docs/ai/context.md` contains the compact product,
+design, and Linear workflow briefing so new sessions do not need to rediscover
+the whole repository.
+
 ## Mobile packaging
 
 Sixxer now includes the initial Capacitor scaffolding for iOS and Android builds while keeping the web app as the primary product surface.

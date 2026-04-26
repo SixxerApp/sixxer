@@ -1,0 +1,25 @@
+---
+description: Sixxer repository guidance for Cursor
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Sixxer Cursor Rules
+
+Read `AGENTS.md` first. It is the canonical guide for this repository.
+
+Then use `docs/ai/context.md` for product/design/Linear context before loading
+task-specific files.
+
+Core constraints:
+
+- Keep changes small and task-focused.
+- Do not hand-edit `src/routeTree.gen.ts`.
+- Do not commit `.env`, `.env.*`, `.dev.vars`, or secrets.
+- Prefer existing route, hook, component, and Supabase patterns.
+- Follow `Design.md` for UI changes.
+- Use Linear issue scope when provided; otherwise use the user request as scope.
+- Prefer `npm run build` after meaningful code changes.
+- Treat `npm run lint` as noisy because of known formatting debt.
+

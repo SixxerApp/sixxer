@@ -1,0 +1,17 @@
+# Sixxer Cursor Rules
+
+Read `AGENTS.md` first. It is the canonical AI guide for this repository.
+
+Use `docs/ai/context.md` for product, design, and Linear workflow context.
+
+Key rules:
+
+- Keep changes small and task-focused.
+- Do not hand-edit `src/routeTree.gen.ts`.
+- Do not commit `.env`, `.env.*`, `.dev.vars`, or secrets.
+- Prefer existing TanStack Start, React, Tailwind, shadcn/ui, and Supabase
+  patterns.
+- Follow `Design.md` for UI work.
+- Prefer `npm run build` after meaningful code changes.
+- Treat `npm run lint` as noisy due to pre-existing formatting debt.
+
