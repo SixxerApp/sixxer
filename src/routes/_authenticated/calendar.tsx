@@ -4,7 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { useAuth } from "@/lib/auth";
-import { formatTime } from "@/lib/format";
+import { formatDate, formatTime } from "@/lib/format";
 import { usePlatform } from "@/platform";
 import { CALENDAR_WINDOW_DAYS, useUpcomingEvents } from "@/features/calendar/use-upcoming-events";
 import { buildSubscribeUrls, useCalendarToken } from "@/features/calendar/use-calendar-token";
@@ -18,6 +18,7 @@ export const Route = createFileRoute("/_authenticated/calendar")({
 function CalendarPage() {
   const { user } = useAuth();
   const { days, loading } = useUpcomingEvents(user?.id);
+  const pageLoading = !user?.id || loading;
 
   return (
     <div className="px-5 pb-10 pt-6">
@@ -30,20 +31,24 @@ function CalendarPage() {
         </div>
       </div>
 
-      <div className="mt-4">
-        {loading ? <CalendarRouteSkeleton /> : <SubscribeCard userId={user?.id} />}
-      </div>
-
-      {!loading && (
+      {pageLoading ? (
+        <div className="mt-4">
+          <CalendarRouteSkeleton />
+        </div>
+      ) : (
         <div className="mt-6">
+          <SubscribeCard userId={user.id} />
+
           {days.length === 0 ? (
-            <EmptyState
-              icon={<CalendarPlus className="h-5 w-5" />}
-              title="Nothing scheduled"
-              body="When your teams add matches or training they'll show up here."
-            />
+            <div className="mt-6">
+              <EmptyState
+                icon={<CalendarPlus className="h-5 w-5" />}
+                title="Nothing scheduled"
+                body="When your teams add matches or training they'll show up here."
+              />
+            </div>
           ) : (
-            <div className="space-y-6">
+            <div className="mt-6 space-y-6">
               {days.map((day) => (
                 <section key={day.key}>
                   <div className="mb-2 flex items-baseline justify-between">
@@ -161,8 +166,8 @@ function SubscribeCard({ userId }: { userId: string | undefined }) {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold">Sync to Apple or Google Calendar</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Generate a private subscription URL. Paste it into your calendar app and matches +
-              training updates automatically.
+              Generate a private subscription URL for your teams&apos; matches and training. Anyone
+              with the link can read your calendar feed, so only add it to calendar apps you trust.
             </p>
           </div>
         </div>
@@ -188,8 +193,11 @@ function SubscribeCard({ userId }: { userId: string | undefined }) {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">Calendar subscription active</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Open the link in Apple Calendar, or in Google Calendar add via &ldquo;Other calendars →
-            From URL&rdquo;.
+            This private URL can show your Sixxer events without signing in. Rotate it if the link
+            was shared with the wrong person.
+          </p>
+          <p className="mt-2 text-[11px] font-medium text-muted-foreground">
+            Last rotated {formatDate(token.createdAt)}
           </p>
         </div>
       </div>
