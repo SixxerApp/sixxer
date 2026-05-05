@@ -20,3 +20,9 @@ test("player home excludes teams they are not on", async ({ page }) => {
 
   await expect(page.getByText(new RegExp(`@ ${SEED.seededTeamBOpponent}`, "i"))).toHaveCount(0);
 });
+
+test("player home does not show the admin command center", async ({ page }) => {
+  await page.goto("/home");
+
+  await expect(page.getByRole("heading", { name: "Command center" })).toHaveCount(0);
+});

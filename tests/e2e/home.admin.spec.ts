@@ -40,4 +40,18 @@ test.describe("admin home", () => {
         .first(),
     ).toBeVisible();
   });
+
+  test("shows admin command center follow-up actions", async ({ page }) => {
+    await page.goto("/home");
+
+    await expect(page.getByRole("heading", { name: "Command center" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      page
+        .getByRole("link")
+        .filter({ hasText: /unanswered RSVP|confirmed|unpaid|pending confirmation|overdue/i })
+        .first(),
+    ).toBeVisible();
+  });
 });

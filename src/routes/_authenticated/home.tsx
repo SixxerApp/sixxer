@@ -1,5 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AlertTriangle, ArrowRightLeft, Bell, CalendarPlus, Shield, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  ArrowRightLeft,
+  Bell,
+  CalendarPlus,
+  ClipboardList,
+  CreditCard,
+  Shield,
+  UserPlus,
+  Wallet,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { dateBlock, formatMoney, formatRelativeDay, formatTime } from "@/lib/format";
 import { InitialAvatar } from "@/components/Avatar";
@@ -19,7 +30,7 @@ function HomePage() {
     (typeof user?.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) ||
     user?.email?.split("@")[0] ||
     "Player";
-  const { name, events, payments, loading } = useHomeSummary(user?.id, fallbackName);
+  const { name, events, payments, adminActions, loading } = useHomeSummary(user?.id, fallbackName);
   const { clubs, loading: groupsLoading } = useUserGroups(user?.id);
   const { count: unreadNotifications } = useUnreadNotificationCount(user?.id);
 
@@ -74,6 +85,105 @@ function HomePage() {
           </Link>
         </div>
       </header>
+
+      {adminTeams.length > 0 && (
+        <section className="mt-7">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-base font-bold tracking-tight">Command center</h2>
+            <span className="text-xs font-semibold text-muted-foreground">
+              {adminActions.length > 0 ? `${adminActions.length} to review` : "Admin"}
+            </span>
+          </div>
+          {loading || groupsLoading ? (
+            <div className="h-28 animate-pulse rounded-2xl bg-card" />
+          ) : adminActions.length > 0 ? (
+            <ul className="space-y-2">
+              {adminActions.map((action) => {
+                const isPayment = action.type === "payment";
+                const toneClass =
+                  action.tone === "danger"
+                    ? "border-destructive/55 text-destructive"
+                    : "border-warning/60 text-warning-foreground";
+                const iconClass =
+                  action.tone === "danger"
+                    ? "bg-destructive/12 text-destructive"
+                    : "bg-warning/15 text-warning-foreground";
+                return (
+                  <li key={action.id}>
+                    <Link
+                      to={isPayment ? "/payments/$paymentId" : "/events/$eventId"}
+                      params={
+                        isPayment
+                          ? { paymentId: action.payment_id ?? "" }
+                          : { eventId: action.event_id ?? "" }
+                      }
+                      className={`flex items-center justify-between gap-3 rounded-2xl border bg-card p-4 ${toneClass}`}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span
+                          className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${iconClass}`}
+                        >
+                          {isPayment ? (
+                            <CreditCard className="h-5 w-5" />
+                          ) : (
+                            <ClipboardList className="h-5 w-5" />
+                          )}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-foreground">
+                            {action.title}
+                          </p>
+                          <p className="truncate text-[11px] text-muted-foreground">
+                            {action.team_name}
+                          </p>
+                          <p className="mt-1 text-xs font-semibold">{action.body}</p>
+                        </div>
+                      </div>
+                      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-primary">
+                        Review
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-sm font-semibold">Nothing needs follow-up.</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Set up the next event, invite players, or collect club dues.
+              </p>
+              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <Link
+                  to="/events/new"
+                  search={{ teamId: adminTeams[0]?.teamId ?? "" }}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-secondary px-3 text-xs font-bold text-foreground"
+                >
+                  <CalendarPlus className="h-4 w-4 text-primary" />
+                  Event
+                </Link>
+                <Link
+                  to="/groups/$teamId/members"
+                  params={{ teamId: adminTeams[0]?.teamId ?? "" }}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-secondary px-3 text-xs font-bold text-foreground"
+                >
+                  <UserPlus className="h-4 w-4 text-primary" />
+                  Invite
+                </Link>
+                <Link
+                  to="/payments/new"
+                  search={{ teamId: adminTeams[0]?.teamId ?? "" }}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-secondary px-3 text-xs font-bold text-foreground"
+                >
+                  <Wallet className="h-4 w-4 text-primary" />
+                  Payment
+                </Link>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="mt-7">
         <div className="mb-3 flex items-center justify-between gap-3">
