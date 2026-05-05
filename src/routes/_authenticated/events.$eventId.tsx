@@ -16,6 +16,8 @@ import {
   Radio,
   Repeat,
   Share2,
+  ShieldCheck,
+  Star,
   Undo2,
   X,
 } from "lucide-react";
@@ -62,6 +64,10 @@ function EventDetail() {
   const admin = useEventAdmin(eventId, user?.id);
   const weather = useWeather(event?.location ?? null, event?.starts_at ?? null);
   const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
+  const [reserveUserIds, setReserveUserIds] = React.useState<string[]>([]);
+  const [captainUserId, setCaptainUserId] = React.useState<string | null>(null);
+  const [wicketkeeperUserId, setWicketkeeperUserId] = React.useState<string | null>(null);
+  const [roleNotes, setRoleNotes] = React.useState<Record<string, string>>({});
   const [announcementMessage, setAnnouncementMessage] = React.useState("");
   const [seriesBusy, setSeriesBusy] = React.useState(false);
   const [responsesExpanded, setResponsesExpanded] = React.useState(false);
@@ -77,10 +83,26 @@ function EventDetail() {
 
   React.useEffect(() => {
     setSelectedUserIds(
-      admin.members.filter((member) => member.selected).map((member) => member.user_id),
+      admin.members
+        .filter((member) => member.selection_status === "selected")
+        .map((member) => member.user_id),
+    );
+    setReserveUserIds(
+      admin.members
+        .filter((member) => member.selection_status === "reserve")
+        .map((member) => member.user_id),
+    );
+    setCaptainUserId(admin.captainUserId);
+    setWicketkeeperUserId(admin.wicketkeeperUserId);
+    setRoleNotes(
+      Object.fromEntries(
+        admin.members
+          .map((member) => [member.user_id, member.role_note] as const)
+          .filter(([, note]) => note),
+      ),
     );
     setAnnouncementMessage(admin.announcementMessage);
-  }, [admin.announcementMessage, admin.members]);
+  }, [admin.announcementMessage, admin.captainUserId, admin.members, admin.wicketkeeperUserId]);
 
   async function handleReminders() {
     if (!event) return;
@@ -94,14 +116,20 @@ function EventDetail() {
 
   async function handleAnnounceSquad() {
     if (!event) return;
-    if (selectedUserIds.length === 0) {
+    if (selectedUserIds.length === 0 && reserveUserIds.length === 0) {
       toast.error("Select at least one player for the squad");
       return;
     }
 
     const { error } = await admin.announceSquad(
-      selectedUserIds,
-      announcementMessage.trim() || null,
+      {
+        selectedUserIds,
+        reserveUserIds,
+        captainUserId,
+        wicketkeeperUserId,
+        roleNotes,
+        message: announcementMessage.trim() || null,
+      },
       event.title,
     );
     if (error) {
@@ -111,10 +139,33 @@ function EventDetail() {
     toast.success("Squad announced");
   }
 
-  function toggleSelectedUser(userId: string) {
-    setSelectedUserIds((current) =>
-      current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId],
-    );
+  function setMemberSelection(userId: string, status: "selected" | "reserve" | null) {
+    setSelectedUserIds((current) => {
+      const withoutUser = current.filter((id) => id !== userId);
+      return status === "selected" ? [...withoutUser, userId] : withoutUser;
+    });
+    setReserveUserIds((current) => {
+      const withoutUser = current.filter((id) => id !== userId);
+      return status === "reserve" ? [...withoutUser, userId] : withoutUser;
+    });
+    if (!status) {
+      setCaptainUserId((current) => (current === userId ? null : current));
+      setWicketkeeperUserId((current) => (current === userId ? null : current));
+    }
+  }
+
+  function toggleCaptain(userId: string) {
+    setCaptainUserId((current) => (current === userId ? null : userId));
+    setMemberSelection(userId, "selected");
+  }
+
+  function toggleWicketkeeper(userId: string) {
+    setWicketkeeperUserId((current) => (current === userId ? null : userId));
+    setMemberSelection(userId, "selected");
+  }
+
+  function updateRoleNote(userId: string, note: string) {
+    setRoleNotes((current) => ({ ...current, [userId]: note }));
   }
 
   async function handleCancelInstance() {
@@ -219,6 +270,7 @@ function EventDetail() {
   const mapTargets = buildMapTargets(event.location, event.location_url);
   const mapHref = mapTargets ? preferredMapLink(mapTargets) : null;
   const rsvpBy = new Date(new Date(event.starts_at).getTime() - 12 * 60 * 60_000);
+  const mySquadMember = admin.members.find((member) => member.user_id === user?.id);
 
   return (
     <div className="px-5 pb-8">
@@ -394,6 +446,30 @@ function EventDetail() {
         </div>
       </section>
 
+      {event.type === "match" && mySquadMember?.selection_status && (
+        <section className="mt-4 rounded-2xl border border-primary/30 bg-primary/10 p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-primary">
+                {mySquadMember.selection_status === "selected" ? "Selected" : "Reserve"}
+              </p>
+              <p className="mt-1 text-sm text-foreground">
+                {mySquadMember.selection_status === "selected"
+                  ? "You are in the match squad."
+                  : "You are listed as a reserve for this match."}
+              </p>
+              {mySquadMember.role_note && (
+                <p className="mt-2 text-xs text-muted-foreground">{mySquadMember.role_note}</p>
+              )}
+            </div>
+            <div className="flex shrink-0 gap-1">
+              {mySquadMember.is_captain && <RoleBadge label="C" title="Captain" />}
+              {mySquadMember.is_wicketkeeper && <RoleBadge label="WK" title="Wicketkeeper" />}
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="mt-6">
         <button
           onClick={() => setResponsesExpanded((v) => !v)}
@@ -546,29 +622,104 @@ function EventDetail() {
                 ) : (
                   admin.members.map((member) => {
                     const selected = selectedUserIds.includes(member.user_id);
+                    const reserve = reserveUserIds.includes(member.user_id);
+                    const active = selected || reserve;
                     return (
-                      <button
+                      <div
                         key={member.user_id}
-                        onClick={() => toggleSelectedUser(member.user_id)}
                         className={
-                          "flex w-full items-center justify-between gap-3 rounded-2xl border p-3 text-left transition-colors " +
-                          (selected
-                            ? "border-primary bg-primary/10"
-                            : "border-border bg-background")
+                          "space-y-3 rounded-2xl border p-3 transition-colors " +
+                          (active ? "border-primary bg-primary/10" : "border-border bg-background")
                         }
                       >
-                        <div>
-                          <p className="text-sm font-semibold">{member.full_name}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {member.response_status
-                              ? `RSVP: ${member.response_status}`
-                              : "No RSVP yet"}
-                          </p>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold">{member.full_name}</p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {member.response_status
+                                ? `RSVP: ${member.response_status}`
+                                : "No RSVP yet"}
+                            </p>
+                          </div>
+                          <div className="flex gap-1">
+                            {captainUserId === member.user_id && (
+                              <RoleBadge label="C" title="Captain" />
+                            )}
+                            {wicketkeeperUserId === member.user_id && (
+                              <RoleBadge label="WK" title="Wicketkeeper" />
+                            )}
+                          </div>
                         </div>
-                        <span className="text-xs font-semibold text-primary">
-                          {selected ? "Selected" : "Select"}
-                        </span>
-                      </button>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <SelectionButton
+                            label="Selected"
+                            active={selected}
+                            ariaLabel={`Mark ${member.full_name} selected`}
+                            onClick={() =>
+                              setMemberSelection(member.user_id, selected ? null : "selected")
+                            }
+                          />
+                          <SelectionButton
+                            label="Reserve"
+                            active={reserve}
+                            ariaLabel={`Mark ${member.full_name} reserve`}
+                            onClick={() =>
+                              setMemberSelection(member.user_id, reserve ? null : "reserve")
+                            }
+                          />
+                          <SelectionButton
+                            label="Clear"
+                            active={!active}
+                            ariaLabel={`Clear ${member.full_name} selection`}
+                            onClick={() => setMemberSelection(member.user_id, null)}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            aria-label={`Toggle ${member.full_name} captain`}
+                            onClick={() => toggleCaptain(member.user_id)}
+                            className={
+                              "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border px-3 text-xs font-semibold " +
+                              (captainUserId === member.user_id
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-card")
+                            }
+                          >
+                            <Star className="h-3.5 w-3.5" />
+                            Captain
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Toggle ${member.full_name} wicketkeeper`}
+                            onClick={() => toggleWicketkeeper(member.user_id)}
+                            className={
+                              "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border px-3 text-xs font-semibold " +
+                              (wicketkeeperUserId === member.user_id
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-card")
+                            }
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Keeper
+                          </button>
+                        </div>
+
+                        <label className="block">
+                          <p className="text-[11px] text-muted-foreground">
+                            Role notes
+                          </p>
+                          <input
+                            aria-label={`${member.full_name} role notes`}
+                            value={roleNotes[member.user_id] ?? ""}
+                            onChange={(event) => updateRoleNote(member.user_id, event.target.value)}
+                            placeholder="e.g. Opens batting, bowls death overs"
+                            className="mt-1 h-9 w-full rounded-xl border border-border bg-card px-3 text-xs outline-none"
+                          />
+                        </label>
+                      </div>
                     );
                   })
                 )}
@@ -584,7 +735,7 @@ function EventDetail() {
 
               <button
                 onClick={handleAnnounceSquad}
-                disabled={admin.busy || selectedUserIds.length === 0}
+                disabled={admin.busy || (selectedUserIds.length === 0 && reserveUserIds.length === 0)}
                 className="inline-flex h-11 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
               >
                 Announce squad
@@ -642,6 +793,44 @@ function RsvpButton({
       {icon}
       {label}
     </button>
+  );
+}
+
+function SelectionButton({
+  label,
+  active,
+  ariaLabel,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  ariaLabel: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      aria-pressed={active}
+      onClick={onClick}
+      className={
+        "h-9 rounded-full border px-2 text-xs font-semibold " +
+        (active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card")
+      }
+    >
+      {label}
+    </button>
+  );
+}
+
+function RoleBadge({ label, title }: { label: string; title: string }) {
+  return (
+    <span
+      title={title}
+      className="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-primary/40 bg-primary/15 px-2 text-[10px] font-extrabold text-primary"
+    >
+      {label}
+    </span>
   );
 }
 

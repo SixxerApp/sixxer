@@ -5,7 +5,10 @@ export interface EventAdminMember {
   user_id: string;
   full_name: string;
   response_status: "going" | "maybe" | "declined" | null;
-  selected: boolean;
+  selection_status: "selected" | "reserve" | null;
+  is_captain: boolean;
+  is_wicketkeeper: boolean;
+  role_note: string;
 }
 
 interface EventAdminState {
@@ -15,6 +18,44 @@ interface EventAdminState {
   unansweredCount: number;
   announcementMessage: string;
   announcedAt: string | null;
+  captainUserId: string | null;
+  wicketkeeperUserId: string | null;
+}
+
+interface AnnounceSquadInput {
+  selectedUserIds: string[];
+  reserveUserIds: string[];
+  captainUserId: string | null;
+  wicketkeeperUserId: string | null;
+  roleNotes: Record<string, string>;
+  message: string | null;
+}
+
+const emptyAdminState: EventAdminState = {
+  isAdmin: false,
+  clubId: null,
+  members: [],
+  unansweredCount: 0,
+  announcementMessage: "",
+  announcedAt: null,
+  captainUserId: null,
+  wicketkeeperUserId: null,
+};
+
+function jsonArrayToStrings(value: unknown) {
+  return Array.isArray(value) ? value.map(String) : [];
+}
+
+function jsonObjectToNotes(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([key, note]) => [key, typeof note === "string" ? note.trim() : ""])
+      .filter(([, note]) => note),
+  );
 }
 
 async function fetchEventAdminState(
@@ -22,14 +63,7 @@ async function fetchEventAdminState(
   userId: string | undefined,
 ): Promise<EventAdminState> {
   if (!userId) {
-    return {
-      isAdmin: false,
-      clubId: null,
-      members: [],
-      unansweredCount: 0,
-      announcementMessage: "",
-      announcedAt: null,
-    };
+    return emptyAdminState;
   }
 
   const { data: event } = await supabase
@@ -39,14 +73,7 @@ async function fetchEventAdminState(
     .maybeSingle();
 
   if (!event) {
-    return {
-      isAdmin: false,
-      clubId: null,
-      members: [],
-      unansweredCount: 0,
-      announcementMessage: "",
-      announcedAt: null,
-    };
+    return emptyAdminState;
   }
 
   const { data: team } = await supabase
@@ -95,22 +122,40 @@ async function fetchEventAdminState(
     }
   }
 
-  const { data: squad } = await supabase
+  const squadResult = await supabase
     .from("event_squads")
-    .select("selected_user_ids, announcement_message, announced_at")
+    .select(
+      "selected_user_ids, reserve_user_ids, captain_user_id, wicketkeeper_user_id, role_notes, announcement_message, announced_at",
+    )
     .eq("event_id", eventId)
     .maybeSingle();
+  const { data: fallbackSquad } =
+    squadResult.error?.code === "42703" || squadResult.error?.code === "PGRST200"
+      ? await supabase
+          .from("event_squads")
+          .select("selected_user_ids, announcement_message, announced_at")
+          .eq("event_id", eventId)
+          .maybeSingle()
+      : { data: null };
+  const squad = squadResult.data ?? fallbackSquad;
 
-  const selectedIds = Array.isArray(squad?.selected_user_ids)
-    ? squad.selected_user_ids.map(String)
-    : [];
+  const selectedIds = jsonArrayToStrings(squad?.selected_user_ids);
+  const reserveIds = jsonArrayToStrings(squad?.reserve_user_ids);
+  const roleNotes = jsonObjectToNotes(squad?.role_notes);
 
   const members = memberIds
     .map((memberId) => ({
       user_id: memberId,
       full_name: names[memberId] ?? "Member",
       response_status: responseMap[memberId] ?? null,
-      selected: selectedIds.includes(memberId),
+      selection_status: selectedIds.includes(memberId)
+        ? ("selected" as const)
+        : reserveIds.includes(memberId)
+          ? ("reserve" as const)
+          : null,
+      is_captain: squad?.captain_user_id === memberId,
+      is_wicketkeeper: squad?.wicketkeeper_user_id === memberId,
+      role_note: roleNotes[memberId] ?? "",
     }))
     .sort((left, right) => left.full_name.localeCompare(right.full_name));
 
@@ -121,6 +166,8 @@ async function fetchEventAdminState(
     unansweredCount: members.filter((member) => !member.response_status).length,
     announcementMessage: squad?.announcement_message ?? "",
     announcedAt: squad?.announced_at ?? null,
+    captainUserId: squad?.captain_user_id ?? null,
+    wicketkeeperUserId: squad?.wicketkeeper_user_id ?? null,
   };
 }
 
@@ -149,14 +196,7 @@ async function insertNotifications(payload: {
 }
 
 export function useEventAdmin(eventId: string, userId: string | undefined) {
-  const [state, setState] = React.useState<EventAdminState>({
-    isAdmin: false,
-    clubId: null,
-    members: [],
-    unansweredCount: 0,
-    announcementMessage: "",
-    announcedAt: null,
-  });
+  const [state, setState] = React.useState<EventAdminState>(emptyAdminState);
   const [loading, setLoading] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
 
@@ -194,15 +234,24 @@ export function useEventAdmin(eventId: string, userId: string | undefined) {
   );
 
   const announceSquad = React.useCallback(
-    async (selectedUserIds: string[], message: string | null, eventTitle: string) => {
+    async (input: AnnounceSquadInput, eventTitle: string) => {
       if (!userId || !state.clubId) return { error: new Error("Missing announcement context") };
 
       setBusy(true);
+      const roleNotes = Object.fromEntries(
+        Object.entries(input.roleNotes)
+          .map(([memberId, note]) => [memberId, note.trim()])
+          .filter(([, note]) => note),
+      );
       const upsertResult = await supabase.from("event_squads").upsert(
         {
           event_id: eventId,
-          selected_user_ids: selectedUserIds,
-          announcement_message: message,
+          selected_user_ids: input.selectedUserIds,
+          reserve_user_ids: input.reserveUserIds,
+          captain_user_id: input.captainUserId,
+          wicketkeeper_user_id: input.wicketkeeperUserId,
+          role_notes: roleNotes,
+          announcement_message: input.message,
           announced_by: userId,
           announced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -211,24 +260,75 @@ export function useEventAdmin(eventId: string, userId: string | undefined) {
       );
 
       if (upsertResult.error) {
+        if (upsertResult.error.code === "PGRST204") {
+          const fallbackResult = await supabase.from("event_squads").upsert(
+            {
+              event_id: eventId,
+              selected_user_ids: input.selectedUserIds,
+              announcement_message: input.message,
+              announced_by: userId,
+              announced_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "event_id" },
+          );
+          if (fallbackResult.error) {
+            setBusy(false);
+            return fallbackResult;
+          }
+
+          const fallbackNotification = await insertNotifications({
+            clubId: state.clubId,
+            userIds: input.selectedUserIds,
+            type: "team_announcement",
+            title: `Team announced: ${eventTitle}`,
+            body:
+              input.message?.trim() ||
+              "You've been selected in the match squad. Open the event for details.",
+            link: `/events/${eventId}`,
+          });
+          if (!fallbackNotification.error) {
+            await load();
+          }
+
+          setBusy(false);
+          return fallbackNotification;
+        }
         setBusy(false);
         return upsertResult;
       }
 
-      const notificationResult = await insertNotifications({
+      const selectedNotification = await insertNotifications({
         clubId: state.clubId,
-        userIds: selectedUserIds,
+        userIds: input.selectedUserIds,
         type: "team_announcement",
         title: `Team announced: ${eventTitle}`,
-        body: message?.trim() || "You've been named in the squad. Open the event for details.",
+        body:
+          input.message?.trim() ||
+          "You've been selected in the match squad. Open the event for details.",
+        link: `/events/${eventId}`,
+      });
+      if (selectedNotification.error) {
+        setBusy(false);
+        return selectedNotification;
+      }
+
+      const reserveNotification = await insertNotifications({
+        clubId: state.clubId,
+        userIds: input.reserveUserIds,
+        type: "team_announcement",
+        title: `Team announced: ${eventTitle}`,
+        body:
+          input.message?.trim() ||
+          "You've been named as a reserve for this match. Open the event for details.",
         link: `/events/${eventId}`,
       });
 
       setBusy(false);
-      if (!notificationResult.error) {
+      if (!reserveNotification.error) {
         await load();
       }
-      return notificationResult;
+      return reserveNotification;
     },
     [eventId, load, state.clubId, userId],
   );

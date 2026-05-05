@@ -183,25 +183,37 @@ export type Database = {
           announced_at: string
           announced_by: string
           announcement_message: string | null
+          captain_user_id: string | null
           event_id: string
+          reserve_user_ids: Json
+          role_notes: Json
           selected_user_ids: Json
           updated_at: string
+          wicketkeeper_user_id: string | null
         }
         Insert: {
           announced_at?: string
           announced_by: string
           announcement_message?: string | null
+          captain_user_id?: string | null
           event_id: string
+          reserve_user_ids?: Json
+          role_notes?: Json
           selected_user_ids?: Json
           updated_at?: string
+          wicketkeeper_user_id?: string | null
         }
         Update: {
           announced_at?: string
           announced_by?: string
           announcement_message?: string | null
+          captain_user_id?: string | null
           event_id?: string
+          reserve_user_ids?: Json
+          role_notes?: Json
           selected_user_ids?: Json
           updated_at?: string
+          wicketkeeper_user_id?: string | null
         }
         Relationships: [
           {
