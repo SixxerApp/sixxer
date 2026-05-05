@@ -674,6 +674,10 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          is_pinned: boolean
+          link_label: string | null
+          link_url: string | null
+          post_type: Database["public"]["Enums"]["post_type"]
           team_id: string
         }
         Insert: {
@@ -682,6 +686,10 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          is_pinned?: boolean
+          link_label?: string | null
+          link_url?: string | null
+          post_type?: Database["public"]["Enums"]["post_type"]
           team_id: string
         }
         Update: {
@@ -690,6 +698,10 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          is_pinned?: boolean
+          link_label?: string | null
+          link_url?: string | null
+          post_type?: Database["public"]["Enums"]["post_type"]
           team_id?: string
         }
         Relationships: [
@@ -698,6 +710,32 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_read_receipts: {
+        Row: {
+          post_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          post_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          post_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_read_receipts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
             referencedColumns: ["id"]
           },
         ]
@@ -875,6 +913,7 @@ export type Database = {
       home_away: "home" | "away"
       payment_category: "match_fee" | "subs" | "kit" | "fine" | "other"
       payment_status: "unpaid" | "marked_paid" | "confirmed" | "rejected"
+      post_type: "post" | "announcement"
       rsvp_status: "going" | "maybe" | "declined"
     }
     CompositeTypes: {
@@ -1011,6 +1050,7 @@ export const Constants = {
       home_away: ["home", "away"],
       payment_category: ["match_fee", "subs", "kit", "fine", "other"],
       payment_status: ["unpaid", "marked_paid", "confirmed", "rejected"],
+      post_type: ["post", "announcement"],
       rsvp_status: ["going", "maybe", "declined"],
     },
   },
