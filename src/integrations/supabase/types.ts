@@ -418,6 +418,7 @@ export type Database = {
       payment_requests: {
         Row: {
           amount_cents: number
+          category: Database["public"]["Enums"]["payment_category"]
           created_at: string
           created_by: string
           currency: string
@@ -430,6 +431,7 @@ export type Database = {
         }
         Insert: {
           amount_cents: number
+          category?: Database["public"]["Enums"]["payment_category"]
           created_at?: string
           created_by: string
           currency?: string
@@ -442,6 +444,7 @@ export type Database = {
         }
         Update: {
           amount_cents?: number
+          category?: Database["public"]["Enums"]["payment_category"]
           created_at?: string
           created_by?: string
           currency?: string
@@ -497,6 +500,53 @@ export type Database = {
             columns: ["poll_id"]
             isOneToOne: false
             referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_templates: {
+        Row: {
+          amount_cents: number
+          category: Database["public"]["Enums"]["payment_category"]
+          created_at: string
+          created_by: string
+          currency: string
+          description: string | null
+          id: string
+          team_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          category?: Database["public"]["Enums"]["payment_category"]
+          created_at?: string
+          created_by: string
+          currency?: string
+          description?: string | null
+          id?: string
+          team_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          category?: Database["public"]["Enums"]["payment_category"]
+          created_at?: string
+          created_by?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          team_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_templates_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -721,11 +771,16 @@ export type Database = {
       poll_team_id: { Args: { _poll_id: string }; Returns: string }
       rotate_calendar_token: { Args: never; Returns: string }
       team_club_id: { Args: { _team_id: string }; Returns: string }
+      user_has_payment_assignment: {
+        Args: { _req_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "player"
       event_type: "match" | "event"
       home_away: "home" | "away"
+      payment_category: "match_fee" | "subs" | "kit" | "fine" | "other"
       payment_status: "unpaid" | "marked_paid" | "confirmed" | "rejected"
       rsvp_status: "going" | "maybe" | "declined"
     }
@@ -861,6 +916,7 @@ export const Constants = {
       app_role: ["admin", "player"],
       event_type: ["match", "event"],
       home_away: ["home", "away"],
+      payment_category: ["match_fee", "subs", "kit", "fine", "other"],
       payment_status: ["unpaid", "marked_paid", "confirmed", "rejected"],
       rsvp_status: ["going", "maybe", "declined"],
     },

@@ -7,6 +7,7 @@ import { useTeamContext } from "@/lib/team-context";
 import { EmptyState } from "@/components/EmptyState";
 import { formatMoney, formatRelativeDay } from "@/lib/format";
 import { isPaymentOverdue } from "@/features/payments/use-payment-detail";
+import { paymentCategoryLabel, type PaymentCategory } from "@/features/payments/payment-options";
 
 export const Route = createFileRoute("/_authenticated/groups/$teamId/payments")({
   component: PaymentsTab,
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/_authenticated/groups/$teamId/payments")(
 interface RequestRow {
   id: string;
   title: string;
+  category: PaymentCategory;
   amount_cents: number;
   currency: string;
   due_at: string | null;
@@ -36,7 +38,7 @@ function PaymentsTab() {
       setLoading(true);
       const { data: reqs } = await supabase
         .from("payment_requests")
-        .select("id, title, amount_cents, currency, due_at")
+        .select("id, title, category, amount_cents, currency, due_at")
         .eq("team_id", teamId)
         .order("created_at", { ascending: false });
       const ids = (reqs ?? []).map((r) => r.id);
@@ -120,6 +122,9 @@ function PaymentsTab() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{r.title}</p>
                       <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          {paymentCategoryLabel(r.category)}
+                        </p>
                         {r.due_at && (
                           <p className="text-xs text-muted-foreground">
                             Due {formatRelativeDay(r.due_at)}

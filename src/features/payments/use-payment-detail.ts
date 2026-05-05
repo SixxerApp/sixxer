@@ -1,10 +1,12 @@
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { PaymentCategory } from "./payment-options";
 
 export interface PaymentRequestRow {
   id: string;
   team_id: string;
   title: string;
+  category: PaymentCategory;
   amount_cents: number;
   currency: string;
   due_at: string | null;

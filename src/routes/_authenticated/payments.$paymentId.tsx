@@ -1,5 +1,5 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { AlertTriangle, BellRing, CheckCheck, ExternalLink, Share2 } from "lucide-react";
+import { AlertTriangle, BellRing, CheckCheck, Download, ExternalLink, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
@@ -10,6 +10,7 @@ import { usePlatform } from "@/platform";
 import { buildPaymentShareText, extractFirstUrl, whatsAppShareUrl } from "@/lib/share";
 import { StatusChip } from "./groups.$teamId.payments";
 import { PaymentDetailSkeleton } from "@/components/RouteSkeletons";
+import { paymentCategoryLabel } from "@/features/payments/payment-options";
 
 export const Route = createFileRoute("/_authenticated/payments/$paymentId")({
   component: PaymentDetail,
@@ -87,6 +88,46 @@ function PaymentDetail() {
     }
   }
 
+  function handleCsvExport() {
+    if (!req || typeof window === "undefined") return;
+    const rows = [
+      [
+        "payment_id",
+        "title",
+        "category",
+        "amount",
+        "currency",
+        "due_at",
+        "recipient_name",
+        "recipient_user_id",
+        "status",
+        "note",
+      ],
+      ...assignments.map((assignment) => [
+        req.id,
+        req.title,
+        paymentCategoryLabel(req.category),
+        (req.amount_cents / 100).toFixed(2),
+        req.currency,
+        req.due_at ?? "",
+        assignment.full_name,
+        assignment.user_id,
+        assignment.status,
+        assignment.note ?? "",
+      ]),
+    ];
+    const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${slugify(req.title)}-payments.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
   if (loading) {
     return <PaymentDetailSkeleton />;
   }
@@ -121,6 +162,7 @@ function PaymentDetail() {
       >
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {paymentCategoryLabel(req.category)} ·{" "}
             {req.due_at ? `Due ${formatRelativeDay(req.due_at)}` : "No due date"}
           </p>
           {overdue && (
@@ -229,13 +271,29 @@ function PaymentDetail() {
                   Remind {unansweredCount} unpaid
                 </button>
               )}
+              <button
+                onClick={handleCsvExport}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export CSV
+              </button>
             </div>
+          )}
+          {totals.pending === 0 && unansweredCount === 0 && (
+            <button
+              onClick={handleCsvExport}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </button>
           )}
         </div>
       )}
 
       <h2 className="mt-6 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-        {isAdmin ? "Members" : "Squad"}
+        {isAdmin ? "Recipients" : "Payment recipients"}
       </h2>
       <ul className="mt-2 space-y-2">
         {assignments.map((a) => (
@@ -282,6 +340,19 @@ function PaymentDetail() {
         ))}
       </ul>
     </div>
+  );
+}
+
+function csvCell(value: string) {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+function slugify(value: string) {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "payment"
   );
 }
 
