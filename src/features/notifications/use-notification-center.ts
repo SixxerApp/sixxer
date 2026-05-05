@@ -101,7 +101,11 @@ export function useNotificationCenter(userId: string | undefined) {
   const [loading, setLoading] = React.useState(true);
 
   const load = React.useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setRows([]);
+      setLoading(true);
+      return;
+    }
     setLoading(true);
     setRows(await fetchNotifications(userId));
     setLoading(false);

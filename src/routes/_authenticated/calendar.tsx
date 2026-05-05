@@ -8,6 +8,7 @@ import { formatTime } from "@/lib/format";
 import { usePlatform } from "@/platform";
 import { CALENDAR_WINDOW_DAYS, useUpcomingEvents } from "@/features/calendar/use-upcoming-events";
 import { buildSubscribeUrls, useCalendarToken } from "@/features/calendar/use-calendar-token";
+import { CalendarRouteSkeleton } from "@/components/RouteSkeletons";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
   head: () => ({ meta: [{ title: "Calendar — Sixxer" }] }),
@@ -30,72 +31,68 @@ function CalendarPage() {
       </div>
 
       <div className="mt-4">
-        <SubscribeCard userId={user?.id} />
+        {loading ? <CalendarRouteSkeleton /> : <SubscribeCard userId={user?.id} />}
       </div>
 
-      <div className="mt-6">
-        {loading ? (
-          <div className="space-y-3">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-24 animate-pulse rounded-2xl bg-card" />
-            ))}
-          </div>
-        ) : days.length === 0 ? (
-          <EmptyState
-            icon={<CalendarPlus className="h-5 w-5" />}
-            title="Nothing scheduled"
-            body="When your teams add matches or training they'll show up here."
-          />
-        ) : (
-          <div className="space-y-6">
-            {days.map((day) => (
-              <section key={day.key}>
-                <div className="mb-2 flex items-baseline justify-between">
-                  <h2 className="text-sm font-bold text-foreground">{day.label}</h2>
-                  <span className="text-xs text-muted-foreground">{day.subLabel}</span>
-                </div>
-                <ul className="space-y-2">
-                  {day.items.map((event) => (
-                    <li key={event.id}>
-                      <Link
-                        to="/events/$eventId"
-                        params={{ eventId: event.id }}
-                        className="flex items-start gap-3 rounded-2xl bg-card p-3 transition-colors hover:bg-secondary"
-                      >
-                        <div className="grid w-12 shrink-0 place-items-center pt-0.5">
-                          <div className="text-center">
-                            <div className="text-[10px] font-semibold tracking-wider text-muted-foreground">
-                              {formatTime(event.starts_at)}
-                            </div>
-                            <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-                              {event.type === "match" ? "Match" : "Event"}
+      {!loading && (
+        <div className="mt-6">
+          {days.length === 0 ? (
+            <EmptyState
+              icon={<CalendarPlus className="h-5 w-5" />}
+              title="Nothing scheduled"
+              body="When your teams add matches or training they'll show up here."
+            />
+          ) : (
+            <div className="space-y-6">
+              {days.map((day) => (
+                <section key={day.key}>
+                  <div className="mb-2 flex items-baseline justify-between">
+                    <h2 className="text-sm font-bold text-foreground">{day.label}</h2>
+                    <span className="text-xs text-muted-foreground">{day.subLabel}</span>
+                  </div>
+                  <ul className="space-y-2">
+                    {day.items.map((event) => (
+                      <li key={event.id}>
+                        <Link
+                          to="/events/$eventId"
+                          params={{ eventId: event.id }}
+                          className="flex items-start gap-3 rounded-2xl bg-card p-3 transition-colors hover:bg-secondary"
+                        >
+                          <div className="grid w-12 shrink-0 place-items-center pt-0.5">
+                            <div className="text-center">
+                              <div className="text-[10px] font-semibold tracking-wider text-muted-foreground">
+                                {formatTime(event.starts_at)}
+                              </div>
+                              <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                                {event.type === "match" ? "Match" : "Event"}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="line-clamp-2 text-sm font-bold leading-snug">
-                            {event.title}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {event.team_name}
-                            {event.home_away ? ` · ${event.home_away}` : ""}
-                          </p>
-                          {event.location && (
-                            <p className="mt-1 flex items-center gap-1 truncate text-[11px] text-muted-foreground">
-                              <MapPin className="h-3 w-3" />
-                              {event.location}
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-2 text-sm font-bold leading-snug">
+                              {event.title}
                             </p>
-                          )}
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        )}
-      </div>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {event.team_name}
+                              {event.home_away ? ` · ${event.home_away}` : ""}
+                            </p>
+                            {event.location && (
+                              <p className="mt-1 flex items-center gap-1 truncate text-[11px] text-muted-foreground">
+                                <MapPin className="h-3 w-3" />
+                                {event.location}
+                              </p>
+                            )}
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

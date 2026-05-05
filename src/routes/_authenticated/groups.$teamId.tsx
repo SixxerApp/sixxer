@@ -3,6 +3,7 @@ import { Bell, ChevronLeft, MoreHorizontal, Plus, Star, Users } from "lucide-rea
 import { useAuth } from "@/lib/auth";
 import { colorFromString } from "@/lib/format";
 import { useTeamLayout } from "@/features/teams/use-team-layout";
+import { TeamRouteSkeleton } from "@/components/RouteSkeletons";
 
 export const Route = createFileRoute("/_authenticated/groups/$teamId")({
   head: () => ({ meta: [{ title: "Team — Sixxer" }] }),
@@ -19,11 +20,7 @@ function TeamLayout() {
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
-      </div>
-    );
+    return <TeamRouteSkeleton />;
   }
   if (error || !data) {
     return (

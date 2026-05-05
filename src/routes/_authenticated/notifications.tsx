@@ -8,6 +8,7 @@ import {
   markNotificationRead,
   useNotificationCenter,
 } from "@/features/notifications/use-notification-center";
+import { NotificationsRouteSkeleton } from "@/components/RouteSkeletons";
 
 export const Route = createFileRoute("/_authenticated/notifications")({
   head: () => ({ meta: [{ title: "Notifications — Sixxer" }] }),
@@ -44,11 +45,7 @@ function NotificationsPage() {
       </header>
 
       {loading ? (
-        <div className="mt-6 space-y-2">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-2xl bg-card" />
-          ))}
-        </div>
+        <NotificationsRouteSkeleton />
       ) : rows.length === 0 ? (
         <div className="mt-8">
           <EmptyState

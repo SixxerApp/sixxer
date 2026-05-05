@@ -9,6 +9,7 @@ import { isPaymentOverdue, usePaymentDetail } from "@/features/payments/use-paym
 import { usePlatform } from "@/platform";
 import { buildPaymentShareText, extractFirstUrl, whatsAppShareUrl } from "@/lib/share";
 import { StatusChip } from "./groups.$teamId.payments";
+import { PaymentDetailSkeleton } from "@/components/RouteSkeletons";
 
 export const Route = createFileRoute("/_authenticated/payments/$paymentId")({
   component: PaymentDetail,
@@ -87,12 +88,7 @@ function PaymentDetail() {
   }
 
   if (loading) {
-    return (
-      <div className="px-5">
-        <PageHeader title="Payment" />
-        <div className="mt-4 h-32 animate-pulse rounded-2xl bg-card" />
-      </div>
-    );
+    return <PaymentDetailSkeleton />;
   }
   if (!req) {
     return (

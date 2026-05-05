@@ -172,6 +172,7 @@ export function usePaymentDetail(paymentId: string, userId: string | undefined) 
   const [busy, setBusy] = React.useState(false);
 
   const load = React.useCallback(async () => {
+    if (!userId) return;
     setLoading(true);
     const detail = await fetchPaymentDetail(paymentId, userId);
     setRequest(detail.request);
