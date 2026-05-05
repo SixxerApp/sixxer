@@ -2,6 +2,7 @@ import { createFileRoute, useParams } from "@tanstack/react-router";
 import { Copy, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { buildInviteUrl } from "@/lib/invites";
 import { useTeamContext } from "@/lib/team-context";
 import { InitialAvatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
@@ -43,6 +44,17 @@ function MembersTab() {
     }
   }
 
+  async function copyInviteLink() {
+    if (!activeCode) return;
+    try {
+      const origin = window.location.origin;
+      await platform.clipboard.writeText(buildInviteUrl(activeCode, origin));
+      toast.success("Invite link copied");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not copy invite link");
+    }
+  }
+
   return (
     <div className="space-y-4">
       {ctx?.isAdmin && (
@@ -51,16 +63,25 @@ function MembersTab() {
             <UserPlus className="h-4 w-4 text-primary" /> Invite players
           </div>
           {activeCode ? (
-            <div className="mt-3 flex items-center gap-3">
-              <div className="flex-1 rounded-xl bg-secondary px-4 py-3 text-center text-xl font-extrabold tracking-[0.4em] uppercase">
-                {activeCode}
+            <div className="mt-3 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 rounded-xl bg-secondary px-4 py-3 text-center text-xl font-extrabold tracking-[0.4em] uppercase">
+                  {activeCode}
+                </div>
+                <button
+                  onClick={copyCode}
+                  className="grid h-12 w-12 place-items-center rounded-xl bg-secondary text-secondary-foreground"
+                  aria-label="Copy code"
+                >
+                  <Copy className="h-5 w-5" />
+                </button>
               </div>
               <button
-                onClick={copyCode}
-                className="grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground"
-                aria-label="Copy code"
+                onClick={copyInviteLink}
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground"
               >
-                <Copy className="h-5 w-5" />
+                <Copy className="h-4 w-4" />
+                Copy invite link
               </button>
             </div>
           ) : (
@@ -74,7 +95,7 @@ function MembersTab() {
           )}
           {activeCode && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Share this code. Players join via Groups → Join with invite code.
+              Share the link with players. The code still works as a manual fallback.
             </p>
           )}
           {activeCode && (

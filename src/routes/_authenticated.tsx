@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, Navigate, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { BottomTabBar } from "@/components/BottomTabBar";
 
@@ -8,6 +8,7 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthenticatedLayout() {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -17,7 +18,11 @@ function AuthenticatedLayout() {
     );
   }
 
-  if (!user) return <Navigate to="/login" />;
+  if (!user) {
+    return (
+      <Navigate to="/login" search={{ redirect: `${location.pathname}${location.searchStr}` }} />
+    );
+  }
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-md bg-background">

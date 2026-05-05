@@ -20,12 +20,17 @@ export async function signInWithPassword(email: string, password: string) {
   return supabase.auth.signInWithPassword({ email, password });
 }
 
-export async function signUpWithPassword(fullName: string, email: string, password: string) {
+export async function signUpWithPassword(
+  fullName: string,
+  email: string,
+  password: string,
+  redirectPath = "/home",
+) {
   return supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: platformServices.deepLinks.getAuthRedirectUrl("/home"),
+      emailRedirectTo: platformServices.deepLinks.getAuthRedirectUrl(redirectPath),
       data: { full_name: fullName },
     },
   });

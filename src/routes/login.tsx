@@ -1,8 +1,9 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { signInWithPassword } from "@/features/auth/api";
+import { normalizeAuthRedirect } from "@/lib/auth-redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,9 @@ const loginSchema = z.object({
 });
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: normalizeAuthRedirect(search.redirect),
+  }),
   head: () => ({
     meta: [
       { title: "Sign in — Sixxer" },
@@ -24,6 +28,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { redirect } = useSearch({ from: "/login" });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -43,7 +48,7 @@ function LoginPage() {
       return;
     }
     toast.success("Welcome back");
-    navigate({ to: "/home" });
+    navigate({ href: redirect });
   }
 
   return (
@@ -98,7 +103,11 @@ function LoginPage() {
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             New here?{" "}
-            <Link to="/signup" className="font-semibold text-primary hover:underline">
+            <Link
+              to="/signup"
+              search={{ redirect }}
+              className="font-semibold text-primary hover:underline"
+            >
               Create an account
             </Link>
           </p>

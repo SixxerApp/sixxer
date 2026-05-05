@@ -50,6 +50,7 @@ async function fetchLatestInviteCode(clubId: string | undefined) {
     .from("invites")
     .select("code")
     .eq("club_id", clubId)
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
     .order("created_at", { ascending: false })
     .limit(1);
 

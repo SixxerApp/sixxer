@@ -1,8 +1,9 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { signUpWithPassword } from "@/features/auth/api";
+import { normalizeAuthRedirect } from "@/lib/auth-redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,9 @@ const signupSchema = z.object({
 });
 
 export const Route = createFileRoute("/signup")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: normalizeAuthRedirect(search.redirect),
+  }),
   head: () => ({
     meta: [
       { title: "Create account — Sixxer" },
@@ -25,6 +29,7 @@ export const Route = createFileRoute("/signup")({
 
 function SignupPage() {
   const navigate = useNavigate();
+  const { redirect } = useSearch({ from: "/signup" });
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,6 +47,7 @@ function SignupPage() {
       parsed.data.fullName,
       parsed.data.email,
       parsed.data.password,
+      redirect,
     );
     setSubmitting(false);
     if (error) {
@@ -49,7 +55,7 @@ function SignupPage() {
       return;
     }
     toast.success("Account created");
-    navigate({ to: "/home" });
+    navigate({ href: redirect });
   }
 
   return (
@@ -116,7 +122,11 @@ function SignupPage() {
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link to="/login" className="font-semibold text-primary hover:underline">
+            <Link
+              to="/login"
+              search={{ redirect }}
+              className="font-semibold text-primary hover:underline"
+            >
               Sign in
             </Link>
           </p>

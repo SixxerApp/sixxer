@@ -1,14 +1,18 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import * as React from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { normalizeInviteCode } from "@/lib/invites";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/join")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    code: normalizeInviteCode(search.code),
+  }),
   head: () => ({ meta: [{ title: "Join with code — Sixxer" }] }),
   component: JoinPage,
 });
@@ -16,17 +20,22 @@ export const Route = createFileRoute("/_authenticated/join")({
 function JoinPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [code, setCode] = React.useState("");
+  const { code: urlCode } = useSearch({ from: "/_authenticated/join" });
+  const [code, setCode] = React.useState(urlCode);
   const [submitting, setSubmitting] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const attemptedUrlCode = React.useRef<string | null>(null);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function joinWithCode(rawCode: string) {
     if (!user) return;
-    const trimmed = code.trim().toUpperCase();
+    const trimmed = normalizeInviteCode(rawCode);
     if (trimmed.length < 4) {
-      toast.error("Enter a valid invite code");
+      const message = "Enter a valid invite code.";
+      setErrorMessage(message);
+      toast.error(message);
       return;
     }
+    setErrorMessage(null);
     setSubmitting(true);
     const { data: invite, error } = await supabase
       .from("invites")
@@ -35,12 +44,16 @@ function JoinPage() {
       .maybeSingle();
     if (error || !invite) {
       setSubmitting(false);
-      toast.error("Invite code not found");
+      const message = "Invite code not found.";
+      setErrorMessage(message);
+      toast.error(message);
       return;
     }
     if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
       setSubmitting(false);
-      toast.error("This invite has expired");
+      const message = "This invite has expired. Ask your club admin for a new link or code.";
+      setErrorMessage(message);
+      toast.error(message);
       return;
     }
     // Add as player (RLS allows since invite exists)
@@ -49,6 +62,7 @@ function JoinPage() {
       .insert({ user_id: user.id, club_id: invite.club_id, role: "player" });
     if (roleErr && !roleErr.message.includes("duplicate")) {
       setSubmitting(false);
+      setErrorMessage(roleErr.message);
       toast.error(roleErr.message);
       return;
     }
@@ -73,6 +87,19 @@ function JoinPage() {
     else navigate({ to: "/groups" });
   }
 
+  React.useEffect(() => {
+    if (!urlCode || attemptedUrlCode.current === urlCode) return;
+
+    setCode(urlCode);
+    attemptedUrlCode.current = urlCode;
+    void joinWithCode(urlCode);
+  }, [urlCode]);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await joinWithCode(code);
+  }
+
   return (
     <div className="px-5 pb-10">
       <PageHeader title="Join with invite code" back="/groups" />
@@ -91,6 +118,11 @@ function JoinPage() {
           />
           <p className="text-xs text-muted-foreground">Ask your club admin for the code.</p>
         </div>
+        {errorMessage && (
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {errorMessage}
+          </div>
+        )}
         <Button
           type="submit"
           disabled={submitting}
