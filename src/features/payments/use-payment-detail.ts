@@ -1,5 +1,6 @@
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { filterUsersByNotificationPreference } from "@/features/notifications/use-notification-center";
 import type { PaymentCategory } from "./payment-options";
 
 export interface PaymentRequestRow {
@@ -127,9 +128,10 @@ async function insertPaymentReminders(params: {
   amount: string;
   paymentId: string;
 }) {
-  if (params.userIds.length === 0) return { error: null };
+  const userIds = await filterUsersByNotificationPreference(params.userIds, "payment_reminders");
+  if (userIds.length === 0) return { error: null };
   return supabase.from("notifications").insert(
-    params.userIds.map((userId) => ({
+    userIds.map((userId) => ({
       user_id: userId,
       club_id: params.clubId,
       type: "payment_reminder",

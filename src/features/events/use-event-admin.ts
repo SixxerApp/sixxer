@@ -1,5 +1,9 @@
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  filterUsersByNotificationPreference,
+  type NotificationPreferenceKey,
+} from "@/features/notifications/use-notification-center";
 
 export interface EventAdminMember {
   user_id: string;
@@ -174,17 +178,19 @@ async function fetchEventAdminState(
 async function insertNotifications(payload: {
   clubId: string;
   userIds: string[];
+  preferenceKey: NotificationPreferenceKey;
   type: string;
   title: string;
   body: string;
   link: string;
 }) {
-  if (payload.userIds.length === 0) {
+  const userIds = await filterUsersByNotificationPreference(payload.userIds, payload.preferenceKey);
+  if (userIds.length === 0) {
     return { error: null };
   }
 
   return supabase.from("notifications").insert(
-    payload.userIds.map((userId) => ({
+    userIds.map((userId) => ({
       user_id: userId,
       club_id: payload.clubId,
       type: payload.type,
@@ -221,6 +227,7 @@ export function useEventAdmin(eventId: string, userId: string | undefined) {
       const result = await insertNotifications({
         clubId: state.clubId,
         userIds: targets,
+        preferenceKey: "event_reminders",
         type: "event_reminder",
         title: `RSVP reminder: ${eventTitle}`,
         body: "Please open the event and update your availability.",
@@ -280,6 +287,7 @@ export function useEventAdmin(eventId: string, userId: string | undefined) {
           const fallbackNotification = await insertNotifications({
             clubId: state.clubId,
             userIds: input.selectedUserIds,
+            preferenceKey: "squad_announcements",
             type: "team_announcement",
             title: `Team announced: ${eventTitle}`,
             body:
@@ -301,6 +309,7 @@ export function useEventAdmin(eventId: string, userId: string | undefined) {
       const selectedNotification = await insertNotifications({
         clubId: state.clubId,
         userIds: input.selectedUserIds,
+        preferenceKey: "squad_announcements",
         type: "team_announcement",
         title: `Team announced: ${eventTitle}`,
         body:
@@ -316,6 +325,7 @@ export function useEventAdmin(eventId: string, userId: string | undefined) {
       const reserveNotification = await insertNotifications({
         clubId: state.clubId,
         userIds: input.reserveUserIds,
+        preferenceKey: "squad_announcements",
         type: "team_announcement",
         title: `Team announced: ${eventTitle}`,
         body:

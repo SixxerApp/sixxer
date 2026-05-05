@@ -389,6 +389,72 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          club_updates: boolean
+          created_at: string
+          event_reminders: boolean
+          payment_reminders: boolean
+          posts_polls: boolean
+          squad_announcements: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          club_updates?: boolean
+          created_at?: string
+          event_reminders?: boolean
+          payment_reminders?: boolean
+          posts_polls?: boolean
+          squad_announcements?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          club_updates?: boolean
+          created_at?: string
+          event_reminders?: boolean
+          payment_reminders?: boolean
+          posts_polls?: boolean
+          squad_announcements?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_push_tokens: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          id: string
+          last_seen_at: string
+          platform: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          last_seen_at?: string
+          platform: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          last_seen_at?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payment_assignments: {
         Row: {
           confirmed_at: string | null
