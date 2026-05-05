@@ -32,6 +32,7 @@ import { Route as AuthenticatedGroupsTeamIdPollsRouteImport } from './routes/_au
 import { Route as AuthenticatedGroupsTeamIdPaymentsRouteImport } from './routes/_authenticated/groups.$teamId.payments'
 import { Route as AuthenticatedGroupsTeamIdMembersRouteImport } from './routes/_authenticated/groups.$teamId.members'
 import { Route as AuthenticatedGroupsTeamIdEventsRouteImport } from './routes/_authenticated/groups.$teamId.events'
+import { Route as AuthenticatedEventsEventIdEditRouteImport } from './routes/_authenticated/events.$eventId_.edit'
 import { Route as AuthenticatedClubsClubIdTeamsNewRouteImport } from './routes/_authenticated/clubs.$clubId.teams.new'
 
 const SignupRoute = SignupRouteImport.update({
@@ -160,6 +161,12 @@ const AuthenticatedGroupsTeamIdEventsRoute =
     path: '/events',
     getParentRoute: () => AuthenticatedGroupsTeamIdRoute,
   } as any)
+const AuthenticatedEventsEventIdEditRoute =
+  AuthenticatedEventsEventIdEditRouteImport.update({
+    id: '/events/$eventId_/edit',
+    path: '/events/$eventId/edit',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedClubsClubIdTeamsNewRoute =
   AuthenticatedClubsClubIdTeamsNewRouteImport.update({
     id: '/clubs/$clubId/teams/new',
@@ -183,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/groups/$teamId': typeof AuthenticatedGroupsTeamIdRouteWithChildren
   '/payments/$paymentId': typeof AuthenticatedPaymentsPaymentIdRoute
   '/payments/new': typeof AuthenticatedPaymentsNewRoute
+  '/events/$eventId/edit': typeof AuthenticatedEventsEventIdEditRoute
   '/groups/$teamId/events': typeof AuthenticatedGroupsTeamIdEventsRoute
   '/groups/$teamId/members': typeof AuthenticatedGroupsTeamIdMembersRoute
   '/groups/$teamId/payments': typeof AuthenticatedGroupsTeamIdPaymentsRoute
@@ -207,6 +215,7 @@ export interface FileRoutesByTo {
   '/events/new': typeof AuthenticatedEventsNewRoute
   '/payments/$paymentId': typeof AuthenticatedPaymentsPaymentIdRoute
   '/payments/new': typeof AuthenticatedPaymentsNewRoute
+  '/events/$eventId/edit': typeof AuthenticatedEventsEventIdEditRoute
   '/groups/$teamId/events': typeof AuthenticatedGroupsTeamIdEventsRoute
   '/groups/$teamId/members': typeof AuthenticatedGroupsTeamIdMembersRoute
   '/groups/$teamId/payments': typeof AuthenticatedGroupsTeamIdPaymentsRoute
@@ -234,6 +243,7 @@ export interface FileRoutesById {
   '/_authenticated/groups/$teamId': typeof AuthenticatedGroupsTeamIdRouteWithChildren
   '/_authenticated/payments/$paymentId': typeof AuthenticatedPaymentsPaymentIdRoute
   '/_authenticated/payments/new': typeof AuthenticatedPaymentsNewRoute
+  '/_authenticated/events/$eventId_/edit': typeof AuthenticatedEventsEventIdEditRoute
   '/_authenticated/groups/$teamId/events': typeof AuthenticatedGroupsTeamIdEventsRoute
   '/_authenticated/groups/$teamId/members': typeof AuthenticatedGroupsTeamIdMembersRoute
   '/_authenticated/groups/$teamId/payments': typeof AuthenticatedGroupsTeamIdPaymentsRoute
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/groups/$teamId'
     | '/payments/$paymentId'
     | '/payments/new'
+    | '/events/$eventId/edit'
     | '/groups/$teamId/events'
     | '/groups/$teamId/members'
     | '/groups/$teamId/payments'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/payments/$paymentId'
     | '/payments/new'
+    | '/events/$eventId/edit'
     | '/groups/$teamId/events'
     | '/groups/$teamId/members'
     | '/groups/$teamId/payments'
@@ -311,6 +323,7 @@ export interface FileRouteTypes {
     | '/_authenticated/groups/$teamId'
     | '/_authenticated/payments/$paymentId'
     | '/_authenticated/payments/new'
+    | '/_authenticated/events/$eventId_/edit'
     | '/_authenticated/groups/$teamId/events'
     | '/_authenticated/groups/$teamId/members'
     | '/_authenticated/groups/$teamId/payments'
@@ -491,6 +504,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGroupsTeamIdEventsRouteImport
       parentRoute: typeof AuthenticatedGroupsTeamIdRoute
     }
+    '/_authenticated/events/$eventId_/edit': {
+      id: '/_authenticated/events/$eventId_/edit'
+      path: '/events/$eventId/edit'
+      fullPath: '/events/$eventId/edit'
+      preLoaderRoute: typeof AuthenticatedEventsEventIdEditRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/clubs/$clubId/teams/new': {
       id: '/_authenticated/clubs/$clubId/teams/new'
       path: '/clubs/$clubId/teams/new'
@@ -553,6 +573,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedEventsNewRoute: typeof AuthenticatedEventsNewRoute
   AuthenticatedPaymentsPaymentIdRoute: typeof AuthenticatedPaymentsPaymentIdRoute
   AuthenticatedPaymentsNewRoute: typeof AuthenticatedPaymentsNewRoute
+  AuthenticatedEventsEventIdEditRoute: typeof AuthenticatedEventsEventIdEditRoute
   AuthenticatedClubsClubIdTeamsNewRoute: typeof AuthenticatedClubsClubIdTeamsNewRoute
 }
 
@@ -568,6 +589,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedEventsNewRoute: AuthenticatedEventsNewRoute,
   AuthenticatedPaymentsPaymentIdRoute: AuthenticatedPaymentsPaymentIdRoute,
   AuthenticatedPaymentsNewRoute: AuthenticatedPaymentsNewRoute,
+  AuthenticatedEventsEventIdEditRoute: AuthenticatedEventsEventIdEditRoute,
   AuthenticatedClubsClubIdTeamsNewRoute: AuthenticatedClubsClubIdTeamsNewRoute,
 }
 

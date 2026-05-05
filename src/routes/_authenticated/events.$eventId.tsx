@@ -1,4 +1,4 @@
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
   BellRing,
   CalendarDays,
@@ -9,6 +9,7 @@ import {
   Clock,
   ExternalLink,
   HelpCircle,
+  Pencil,
   MapPin,
   Megaphone,
   Navigation,
@@ -31,6 +32,17 @@ import { buildSingleEventIcs, downloadIcs } from "@/lib/ics-single";
 import { buildEventShareText, whatsAppShareUrl } from "@/lib/share";
 import { useEventAdmin } from "@/features/events/use-event-admin";
 import { type ResponseRow, useEventDetail } from "@/features/events/use-event-detail";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   cancelEventInstance,
   cancelSeriesFromDate,
@@ -172,11 +184,6 @@ function EventDetail() {
 
   async function handleCancelSeriesFromHere() {
     if (!event?.series_id) return;
-    const confirmed =
-      typeof window === "undefined"
-        ? true
-        : window.confirm("Cancel this and all future events in the series?");
-    if (!confirmed) return;
     setSeriesBusy(true);
     const { error } = await cancelSeriesFromDate(event.series_id, event.starts_at);
     setSeriesBusy(false);
@@ -320,14 +327,31 @@ function EventDetail() {
           <div className="flex items-center justify-between gap-3">
             <span className="font-semibold">This event is cancelled</span>
             {admin.isAdmin && (
-              <button
-                onClick={handleRestoreInstance}
-                disabled={seriesBusy}
-                className="inline-flex h-8 items-center gap-1 rounded-full border border-destructive/40 px-3 text-xs font-semibold"
-              >
-                <Undo2 className="h-3.5 w-3.5" />
-                Restore
-              </button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    disabled={seriesBusy}
+                    className="inline-flex h-8 items-center gap-1 rounded-full border border-destructive/40 px-3 text-xs font-semibold"
+                  >
+                    <Undo2 className="h-3.5 w-3.5" />
+                    Restore
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Restore this event?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Players will see this event as active again. Existing RSVPs stay attached.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep cancelled</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleRestoreInstance}>
+                      Restore event
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
         </section>
@@ -407,7 +431,7 @@ function EventDetail() {
                 Admin tools
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Follow up with unanswered players and publish the match squad from here.
+                Edit match details, follow up with unanswered players, and publish the match squad.
               </p>
             </div>
             {admin.unansweredCount > 0 && (
@@ -422,25 +446,75 @@ function EventDetail() {
             )}
           </div>
 
+          <Link
+            to="/events/$eventId/edit"
+            params={{ eventId: event.id }}
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground"
+          >
+            <Pencil className="h-4 w-4" />
+            Edit event
+          </Link>
+
           {!event.is_cancelled && (
             <div className="flex flex-wrap gap-2 rounded-2xl bg-background p-3">
-              <button
-                onClick={handleCancelInstance}
-                disabled={seriesBusy}
-                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-destructive"
-              >
-                <X className="h-3.5 w-3.5" />
-                Cancel this event
-              </button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    disabled={seriesBusy}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-destructive"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Cancel this event
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel this event?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      The event remains visible as cancelled and existing RSVPs stay attached.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep active</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleCancelInstance}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Cancel event
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               {event.series_id && (
-                <button
-                  onClick={handleCancelSeriesFromHere}
-                  disabled={seriesBusy}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-destructive"
-                >
-                  <Repeat className="h-3.5 w-3.5" />
-                  Cancel this & future
-                </button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      disabled={seriesBusy}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-destructive"
+                    >
+                      <Repeat className="h-3.5 w-3.5" />
+                      Cancel this & future
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancel this and future events?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This cancels every uncancelled instance in this series from this date
+                        forward. Past events and existing RSVP rows are not deleted.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep series active</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleCancelSeriesFromHere}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Cancel future events
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           )}
