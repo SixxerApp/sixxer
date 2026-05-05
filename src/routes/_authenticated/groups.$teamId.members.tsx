@@ -6,7 +6,7 @@ import { buildInviteUrl } from "@/lib/invites";
 import { useTeamContext } from "@/lib/team-context";
 import { InitialAvatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
-import { useTeamMembers } from "@/features/teams/use-team-members";
+import { type MemberRow, useTeamMembers } from "@/features/teams/use-team-members";
 import { usePlatform } from "@/platform";
 
 export const Route = createFileRoute("/_authenticated/groups/$teamId/members")({
@@ -133,6 +133,7 @@ function MembersTab() {
                     <span className="ml-2 text-xs font-normal text-muted-foreground">(you)</span>
                   )}
                 </p>
+                <MemberCricketSummary member={m} />
               </div>
               {m.is_admin && (
                 <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
@@ -142,6 +143,39 @@ function MembersTab() {
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function MemberCricketSummary({ member }: { member: MemberRow }) {
+  const chips = [
+    member.primary_role,
+    member.is_wicketkeeper ? "Wicketkeeper" : null,
+    member.batting_style,
+    member.bowling_style,
+  ].filter(Boolean);
+
+  if (chips.length === 0 && !member.availability_notes) {
+    return <p className="mt-0.5 text-xs text-muted-foreground">Cricket profile not set</p>;
+  }
+
+  return (
+    <div className="mt-1 space-y-1">
+      {chips.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {chips.map((chip) => (
+            <span
+              key={chip}
+              className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground"
+            >
+              {chip}
+            </span>
+          ))}
+        </div>
+      )}
+      {member.availability_notes && (
+        <p className="line-clamp-2 text-xs text-muted-foreground">{member.availability_notes}</p>
       )}
     </div>
   );

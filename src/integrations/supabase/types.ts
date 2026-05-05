@@ -638,27 +638,42 @@ export type Database = {
       }
       profiles: {
         Row: {
+          availability_notes: string | null
           avatar_color: string
+          batting_style: string | null
+          bowling_style: string | null
           created_at: string
           full_name: string
           id: string
+          is_wicketkeeper: boolean
           phone: string | null
+          primary_role: string | null
           updated_at: string
         }
         Insert: {
+          availability_notes?: string | null
           avatar_color?: string
+          batting_style?: string | null
+          bowling_style?: string | null
           created_at?: string
           full_name: string
           id: string
+          is_wicketkeeper?: boolean
           phone?: string | null
+          primary_role?: string | null
           updated_at?: string
         }
         Update: {
+          availability_notes?: string | null
           avatar_color?: string
+          batting_style?: string | null
+          bowling_style?: string | null
           created_at?: string
           full_name?: string
           id?: string
+          is_wicketkeeper?: boolean
           phone?: string | null
+          primary_role?: string | null
           updated_at?: string
         }
         Relationships: []

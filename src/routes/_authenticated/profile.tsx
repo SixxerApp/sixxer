@@ -21,6 +21,11 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [fullName, setFullName] = React.useState("");
   const [phone, setPhone] = React.useState("");
+  const [primaryRole, setPrimaryRole] = React.useState("");
+  const [battingStyle, setBattingStyle] = React.useState("");
+  const [bowlingStyle, setBowlingStyle] = React.useState("");
+  const [isWicketkeeper, setIsWicketkeeper] = React.useState(false);
+  const [availabilityNotes, setAvailabilityNotes] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
 
@@ -40,7 +45,9 @@ function ProfilePage() {
       setLoading(true);
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, phone")
+        .select(
+          "full_name, phone, primary_role, batting_style, bowling_style, is_wicketkeeper, availability_notes",
+        )
         .eq("id", user.id)
         .maybeSingle();
 
@@ -49,12 +56,22 @@ function ProfilePage() {
       if (error) {
         setFullName(fallbackName);
         setPhone("");
+        setPrimaryRole("");
+        setBattingStyle("");
+        setBowlingStyle("");
+        setIsWicketkeeper(false);
+        setAvailabilityNotes("");
         setLoading(false);
         return;
       }
 
       setFullName(data?.full_name ?? fallbackName);
       setPhone(data?.phone ?? "");
+      setPrimaryRole(data?.primary_role ?? "");
+      setBattingStyle(data?.batting_style ?? "");
+      setBowlingStyle(data?.bowling_style ?? "");
+      setIsWicketkeeper(data?.is_wicketkeeper ?? false);
+      setAvailabilityNotes(data?.availability_notes ?? "");
       setLoading(false);
     })();
 
@@ -71,6 +88,11 @@ function ProfilePage() {
     const { error } = await saveProfile(user.id, {
       fullName,
       phone,
+      primaryRole,
+      battingStyle,
+      bowlingStyle,
+      isWicketkeeper,
+      availabilityNotes,
     });
     setSaving(false);
 
@@ -132,6 +154,79 @@ function ProfilePage() {
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
             maxLength={32}
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="primaryRole">Primary role</Label>
+            <select
+              id="primaryRole"
+              value={primaryRole}
+              onChange={(event) => setPrimaryRole(event.target.value)}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Not set</option>
+              <option value="Batter">Batter</option>
+              <option value="Bowler">Bowler</option>
+              <option value="All-rounder">All-rounder</option>
+              <option value="Wicketkeeper">Wicketkeeper</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="battingStyle">Batting style</Label>
+            <select
+              id="battingStyle"
+              value={battingStyle}
+              onChange={(event) => setBattingStyle(event.target.value)}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Not set</option>
+              <option value="Right-hand bat">Right-hand bat</option>
+              <option value="Left-hand bat">Left-hand bat</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="bowlingStyle">Bowling style</Label>
+            <select
+              id="bowlingStyle"
+              value={bowlingStyle}
+              onChange={(event) => setBowlingStyle(event.target.value)}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Not set</option>
+              <option value="Right-arm pace">Right-arm pace</option>
+              <option value="Left-arm pace">Left-arm pace</option>
+              <option value="Off spin">Off spin</option>
+              <option value="Leg spin">Leg spin</option>
+              <option value="Left-arm spin">Left-arm spin</option>
+              <option value="Does not bowl">Does not bowl</option>
+            </select>
+          </div>
+
+          <label className="flex min-h-10 items-center gap-3 rounded-md border border-border px-3 text-sm">
+            <input
+              type="checkbox"
+              checked={isWicketkeeper}
+              onChange={(event) => setIsWicketkeeper(event.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            Wicketkeeper
+          </label>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="availabilityNotes">Formats or availability notes</Label>
+          <textarea
+            id="availabilityNotes"
+            value={availabilityNotes}
+            onChange={(event) => setAvailabilityNotes(event.target.value)}
+            rows={3}
+            maxLength={240}
+            className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
+            placeholder="e.g. Prefers T20s, unavailable Sundays before noon"
           />
         </div>
 

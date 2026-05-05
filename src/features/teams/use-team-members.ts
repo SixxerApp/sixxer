@@ -6,6 +6,11 @@ export interface MemberRow {
   user_id: string;
   full_name: string;
   is_admin: boolean;
+  primary_role: string | null;
+  batting_style: string | null;
+  bowling_style: string | null;
+  is_wicketkeeper: boolean;
+  availability_notes: string | null;
 }
 
 interface TeamMembersOptions {
@@ -25,7 +30,17 @@ async function fetchTeamMembers(teamId: string, clubId: string | undefined) {
     return [];
   }
 
-  const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+  const profileResult = await supabase
+    .from("profiles")
+    .select(
+      "id, full_name, primary_role, batting_style, bowling_style, is_wicketkeeper, availability_notes",
+    )
+    .in("id", ids);
+  const { data: fallbackProfiles } =
+    profileResult.error?.code === "42703" || profileResult.error?.code === "PGRST200"
+      ? await supabase.from("profiles").select("id, full_name").in("id", ids)
+      : { data: null };
+  const profiles = profileResult.data ?? fallbackProfiles;
   let admins: string[] = [];
   if (clubId) {
     const { data: roles } = await supabase
@@ -40,6 +55,11 @@ async function fetchTeamMembers(teamId: string, clubId: string | undefined) {
     user_id: profile.id,
     full_name: profile.full_name,
     is_admin: admins.includes(profile.id),
+    primary_role: profile.primary_role ?? null,
+    batting_style: profile.batting_style ?? null,
+    bowling_style: profile.bowling_style ?? null,
+    is_wicketkeeper: profile.is_wicketkeeper ?? false,
+    availability_notes: profile.availability_notes ?? null,
   })) satisfies MemberRow[];
 }
 

@@ -2,9 +2,14 @@ import * as React from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-interface ProfileDraft {
+export interface ProfileDraft {
   fullName: string;
   phone: string;
+  primaryRole: string;
+  battingStyle: string;
+  bowlingStyle: string;
+  isWicketkeeper: boolean;
+  availabilityNotes: string;
 }
 
 function fallbackProfile(user: User | undefined | null): ProfileDraft {
@@ -16,26 +21,45 @@ function fallbackProfile(user: User | undefined | null): ProfileDraft {
   return {
     fullName,
     phone: "",
+    primaryRole: "",
+    battingStyle: "",
+    bowlingStyle: "",
+    isWicketkeeper: false,
+    availabilityNotes: "",
   };
 }
 
 async function fetchProfile(user: User): Promise<ProfileDraft> {
   const { data } = await supabase
     .from("profiles")
-    .select("full_name, phone")
+    .select(
+      "full_name, phone, primary_role, batting_style, bowling_style, is_wicketkeeper, availability_notes",
+    )
     .eq("id", user.id)
     .maybeSingle();
 
   return {
     fullName: data?.full_name ?? fallbackProfile(user).fullName,
     phone: data?.phone ?? "",
+    primaryRole: data?.primary_role ?? "",
+    battingStyle: data?.batting_style ?? "",
+    bowlingStyle: data?.bowling_style ?? "",
+    isWicketkeeper: data?.is_wicketkeeper ?? false,
+    availabilityNotes: data?.availability_notes ?? "",
   };
 }
 
 export async function saveProfile(userId: string, draft: ProfileDraft) {
-  return supabase
-    .from("profiles")
-    .upsert({ id: userId, full_name: draft.fullName.trim(), phone: draft.phone.trim() || null });
+  return supabase.from("profiles").upsert({
+    id: userId,
+    full_name: draft.fullName.trim(),
+    phone: draft.phone.trim() || null,
+    primary_role: draft.primaryRole.trim() || null,
+    batting_style: draft.battingStyle.trim() || null,
+    bowling_style: draft.bowlingStyle.trim() || null,
+    is_wicketkeeper: draft.isWicketkeeper,
+    availability_notes: draft.availabilityNotes.trim() || null,
+  });
 }
 
 export function useProfile(user: User | null | undefined) {
