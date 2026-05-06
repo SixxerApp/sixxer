@@ -157,6 +157,7 @@ export type Database = {
           meetup_offset_minutes: number | null
           rrule: string
           scoring_url: string | null
+          season_id: string | null
           starts_at: string
           team_id: string
           title: string
@@ -174,6 +175,7 @@ export type Database = {
           meetup_offset_minutes?: number | null
           rrule: string
           scoring_url?: string | null
+          season_id?: string | null
           starts_at: string
           team_id: string
           title: string
@@ -191,6 +193,7 @@ export type Database = {
           meetup_offset_minutes?: number | null
           rrule?: string
           scoring_url?: string | null
+          season_id?: string | null
           starts_at?: string
           team_id?: string
           title?: string
@@ -198,6 +201,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "event_series_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "event_series_team_id_fkey"
             columns: ["team_id"]
@@ -268,6 +278,7 @@ export type Database = {
           meetup_at: string | null
           opponent: string | null
           scoring_url: string | null
+          season_id: string | null
           series_id: string | null
           starts_at: string
           team_id: string
@@ -287,6 +298,7 @@ export type Database = {
           meetup_at?: string | null
           opponent?: string | null
           scoring_url?: string | null
+          season_id?: string | null
           series_id?: string | null
           starts_at: string
           team_id: string
@@ -306,6 +318,7 @@ export type Database = {
           meetup_at?: string | null
           opponent?: string | null
           scoring_url?: string | null
+          season_id?: string | null
           series_id?: string | null
           starts_at?: string
           team_id?: string
@@ -313,6 +326,13 @@ export type Database = {
           type?: Database["public"]["Enums"]["event_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "events_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_series_id_fkey"
             columns: ["series_id"]
@@ -325,6 +345,63 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fixture_results: {
+        Row: {
+          event_id: string
+          opponent_runs: number | null
+          opponent_wickets: number | null
+          recorded_at: string | null
+          recorded_by: string | null
+          result_summary: string | null
+          season_id: string | null
+          status: Database["public"]["Enums"]["fixture_result_status"]
+          team_runs: number | null
+          team_wickets: number | null
+          updated_at: string
+        }
+        Insert: {
+          event_id: string
+          opponent_runs?: number | null
+          opponent_wickets?: number | null
+          recorded_at?: string | null
+          recorded_by?: string | null
+          result_summary?: string | null
+          season_id?: string | null
+          status?: Database["public"]["Enums"]["fixture_result_status"]
+          team_runs?: number | null
+          team_wickets?: number | null
+          updated_at?: string
+        }
+        Update: {
+          event_id?: string
+          opponent_runs?: number | null
+          opponent_wickets?: number | null
+          recorded_at?: string | null
+          recorded_by?: string | null
+          result_summary?: string | null
+          season_id?: string | null
+          status?: Database["public"]["Enums"]["fixture_result_status"]
+          team_runs?: number | null
+          team_wickets?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixture_results_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixture_results_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
             referencedColumns: ["id"]
           },
         ]
@@ -533,6 +610,7 @@ export type Database = {
           due_at: string | null
           event_id: string | null
           id: string
+          season_id: string | null
           team_id: string
           title: string
         }
@@ -546,6 +624,7 @@ export type Database = {
           due_at?: string | null
           event_id?: string | null
           id?: string
+          season_id?: string | null
           team_id: string
           title: string
         }
@@ -559,6 +638,7 @@ export type Database = {
           due_at?: string | null
           event_id?: string | null
           id?: string
+          season_id?: string | null
           team_id?: string
           title?: string
         }
@@ -568,6 +648,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_requests_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
             referencedColumns: ["id"]
           },
           {
@@ -811,6 +898,103 @@ export type Database = {
         }
         Relationships: []
       }
+      season_standings: {
+        Row: {
+          id: string
+          lost: number
+          net_run_rate: number | null
+          no_result: number
+          played: number
+          points: number
+          position: number | null
+          season_id: string
+          team_name: string
+          tied: number
+          updated_at: string
+          won: number
+        }
+        Insert: {
+          id?: string
+          lost?: number
+          net_run_rate?: number | null
+          no_result?: number
+          played?: number
+          points?: number
+          position?: number | null
+          season_id: string
+          team_name: string
+          tied?: number
+          updated_at?: string
+          won?: number
+        }
+        Update: {
+          id?: string
+          lost?: number
+          net_run_rate?: number | null
+          no_result?: number
+          played?: number
+          points?: number
+          position?: number | null
+          season_id?: string
+          team_name?: string
+          tied?: number
+          updated_at?: string
+          won?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_standings_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seasons: {
+        Row: {
+          created_at: string
+          created_by: string
+          ends_on: string | null
+          id: string
+          is_active: boolean
+          name: string
+          starts_on: string | null
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          ends_on?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          starts_on?: string | null
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          ends_on?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          starts_on?: string | null
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seasons_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           created_at: string
@@ -930,6 +1114,11 @@ export type Database = {
       payment_request_team_id: { Args: { _req_id: string }; Returns: string }
       poll_team_id: { Args: { _poll_id: string }; Returns: string }
       rotate_calendar_token: { Args: never; Returns: string }
+      season_team_id: { Args: { _season_id: string }; Returns: string }
+      set_active_season: {
+        Args: { _season_id: string }
+        Returns: Database["public"]["Tables"]["seasons"]["Row"]
+      }
       team_club_id: { Args: { _team_id: string }; Returns: string }
       user_has_payment_assignment: {
         Args: { _req_id: string; _user_id: string }
@@ -939,6 +1128,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "player"
       event_type: "match" | "event"
+      fixture_result_status: "scheduled" | "completed" | "abandoned" | "cancelled"
       home_away: "home" | "away"
       payment_category: "match_fee" | "subs" | "kit" | "fine" | "other"
       payment_status: "unpaid" | "marked_paid" | "confirmed" | "rejected"
@@ -1076,6 +1266,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "player"],
       event_type: ["match", "event"],
+      fixture_result_status: ["scheduled", "completed", "abandoned", "cancelled"],
       home_away: ["home", "away"],
       payment_category: ["match_fee", "subs", "kit", "fine", "other"],
       payment_status: ["unpaid", "marked_paid", "confirmed", "rejected"],

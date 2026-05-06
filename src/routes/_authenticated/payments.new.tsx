@@ -14,6 +14,7 @@ import {
   type PaymentCategory,
   paymentCategoryLabel,
 } from "@/features/payments/payment-options";
+import { useTeamSeasons } from "@/features/seasons/use-team-seasons";
 
 export const Route = createFileRoute("/_authenticated/payments/new")({
   validateSearch: (s: Record<string, unknown>) => ({ teamId: String(s.teamId ?? "") }),
@@ -45,8 +46,10 @@ function NewPaymentPage() {
   const { teamId } = useSearch({ from: "/_authenticated/payments/new" });
   const { user } = useAuth();
   const { data: ctx, loading: contextLoading } = useTeamContext(teamId, user?.id);
+  const { seasons, activeSeason, loading: seasonsLoading } = useTeamSeasons(teamId);
   const navigate = useNavigate();
   const [title, setTitle] = React.useState("");
+  const [seasonSelection, setSeasonSelection] = React.useState("");
   const [category, setCategory] = React.useState<PaymentCategory>("match_fee");
   const [amount, setAmount] = React.useState("");
   const [currency, setCurrency] = React.useState("USD");
@@ -59,6 +62,11 @@ function NewPaymentPage() {
   const [saveTemplate, setSaveTemplate] = React.useState(false);
   const [loadingOptions, setLoadingOptions] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
+
+  React.useEffect(() => {
+    if (seasonSelection || seasonsLoading) return;
+    setSeasonSelection(activeSeason?.id ?? "none");
+  }, [activeSeason?.id, seasonSelection, seasonsLoading]);
 
   React.useEffect(() => {
     if (!ctx?.isAdmin || !teamId) return;
@@ -147,6 +155,7 @@ function NewPaymentPage() {
       return;
     }
     setSubmitting(true);
+    const selectedSeasonId = seasonSelection !== "none" ? seasonSelection || null : null;
     const { data: req, error } = await supabase
       .from("payment_requests")
       .insert({
@@ -157,6 +166,7 @@ function NewPaymentPage() {
         currency,
         due_at: dueAt ? new Date(dueAt).toISOString() : null,
         description: description || null,
+        season_id: selectedSeasonId,
         created_by: user.id,
       })
       .select("id")
@@ -212,6 +222,24 @@ function NewPaymentPage() {
             {templates.map((template) => (
               <option key={template.id} value={template.id}>
                 {template.title} · {paymentCategoryLabel(template.category)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="season">Season</Label>
+          <select
+            id="season"
+            value={seasonSelection || "none"}
+            onChange={(e) => setSeasonSelection(e.target.value)}
+            disabled={seasonsLoading}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="none">No season</option>
+            {seasons.map((season) => (
+              <option key={season.id} value={season.id}>
+                {season.name}
+                {season.is_active ? " (active)" : ""}
               </option>
             ))}
           </select>

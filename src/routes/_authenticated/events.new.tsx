@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/PageHeader";
 import { createEventSeries } from "@/features/events/use-event-series";
+import { useTeamSeasons } from "@/features/seasons/use-team-seasons";
 import {
   describeRecurrence,
   MAX_OCCURRENCES,
@@ -43,9 +44,11 @@ function NewEventPage() {
   const { teamId } = useSearch({ from: "/_authenticated/events/new" });
   const { user } = useAuth();
   const { data: ctx, loading: contextLoading } = useTeamContext(teamId, user?.id);
+  const { seasons, activeSeason, loading: seasonsLoading } = useTeamSeasons(teamId);
   const navigate = useNavigate();
   const [type, setType] = React.useState<"match" | "event">("match");
   const [homeAway, setHomeAway] = React.useState<"home" | "away">("home");
+  const [seasonSelection, setSeasonSelection] = React.useState("");
   const [title, setTitle] = React.useState("");
   const [opponent, setOpponent] = React.useState("");
   const [startsAt, setStartsAt] = React.useState("");
@@ -60,6 +63,11 @@ function NewEventPage() {
   const [repeat, setRepeat] = React.useState<RepeatOption>("none");
   const [interval, setInterval] = React.useState("1");
   const [count, setCount] = React.useState("12");
+
+  React.useEffect(() => {
+    if (seasonSelection || seasonsLoading) return;
+    setSeasonSelection(activeSeason?.id ?? "none");
+  }, [activeSeason?.id, seasonSelection, seasonsLoading]);
 
   if (contextLoading) {
     return (
@@ -103,6 +111,7 @@ function NewEventPage() {
     }
 
     setSubmitting(true);
+    const selectedSeasonId = seasonSelection !== "none" ? seasonSelection || null : null;
     const startsAtDate = new Date(startsAt);
     const meetupDate = meetupAt ? new Date(meetupAt) : null;
     const endsAtDate = endsAt ? new Date(endsAt) : null;
@@ -128,6 +137,7 @@ function NewEventPage() {
         locationUrl: locationUrl.trim() || null,
         description: description || null,
         createdBy: user.id,
+        seasonId: selectedSeasonId,
         recurrence: { freq: repeat, interval: intervalNum, count: countNum },
         opponent: type === "match" ? opponent || null : null,
         homeAway: type === "match" ? homeAway : null,
@@ -158,6 +168,7 @@ function NewEventPage() {
         location: location || null,
         location_url: locationUrl.trim() || null,
         scoring_url: type === "match" ? scoringUrl.trim() || null : null,
+        season_id: selectedSeasonId,
         description: description || null,
         created_by: user.id,
       })
@@ -225,6 +236,28 @@ function NewEventPage() {
             </div>
           </>
         )}
+
+        <div className="space-y-1.5">
+          <Label htmlFor="season">Season</Label>
+          <select
+            id="season"
+            value={seasonSelection || "none"}
+            onChange={(e) => setSeasonSelection(e.target.value)}
+            disabled={seasonsLoading}
+            className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="none">No season</option>
+            {seasons.map((season) => (
+              <option key={season.id} value={season.id}>
+                {season.name}
+                {season.is_active ? " (active)" : ""}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-muted-foreground">
+            New events default to the active season when one is set.
+          </p>
+        </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="title">

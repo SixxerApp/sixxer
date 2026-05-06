@@ -12,6 +12,7 @@ export interface EventSeriesInput {
   locationUrl: string | null;
   description: string | null;
   createdBy: string;
+  seasonId?: string | null;
   recurrence: Recurrence;
   // Match-specific fields, copied onto each generated event row.
   opponent?: string | null;
@@ -49,6 +50,7 @@ export async function createEventSeries(input: EventSeriesInput): Promise<Series
       starts_at: input.startsAt.toISOString(),
       created_by: input.createdBy,
       scoring_url: input.scoringUrl ?? null,
+      season_id: input.seasonId ?? null,
     })
     .select("id")
     .single();
@@ -64,6 +66,7 @@ export async function createEventSeries(input: EventSeriesInput): Promise<Series
   const rows = occurrences.map((occurrence) => ({
     team_id: input.teamId,
     series_id: series.id,
+    season_id: input.seasonId ?? null,
     type: input.type,
     title: input.title,
     opponent: input.opponent ?? null,
