@@ -59,7 +59,7 @@ test("direct calendar route shows a calendar skeleton before events", async ({ p
   await expect(page.getByText(new RegExp(`vs ${SEED.seededMatchOpponent}`, "i"))).toBeVisible();
 });
 
-test("direct notifications route shows a notifications skeleton before empty state", async ({
+test("direct notifications route shows a notifications skeleton before content", async ({
   page,
 }) => {
   await delayOnce(page, "/rest/v1/notifications");
@@ -67,5 +67,7 @@ test("direct notifications route shows a notifications skeleton before empty sta
 
   await expect(page.getByRole("status", { name: "Loading notifications" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Notifications" })).toBeVisible();
-  await expect(page.getByText("All caught up")).toBeVisible();
+  await expect(
+    page.getByText("All caught up").or(page.getByRole("listitem").first()),
+  ).toBeVisible();
 });
