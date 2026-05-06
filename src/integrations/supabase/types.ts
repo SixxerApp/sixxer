@@ -39,6 +39,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_onboarding_dismissals: {
+        Row: {
+          club_id: string
+          dismissed_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          club_id: string
+          dismissed_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          club_id?: string
+          dismissed_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_onboarding_dismissals_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_tokens: {
         Row: {
           created_at: string

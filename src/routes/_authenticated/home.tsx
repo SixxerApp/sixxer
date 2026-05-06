@@ -5,16 +5,24 @@ import {
   ArrowRightLeft,
   Bell,
   CalendarPlus,
+  CheckCircle2,
   ClipboardList,
   CreditCard,
+  Circle,
   Shield,
   UserPlus,
   Wallet,
+  X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { dateBlock, formatMoney, formatRelativeDay, formatTime } from "@/lib/format";
 import { InitialAvatar } from "@/components/Avatar";
-import { useHomeSummary } from "@/features/home/use-home-summary";
+import {
+  type AdminOnboardingChecklist,
+  type AdminOnboardingItem,
+  useHomeSummary,
+} from "@/features/home/use-home-summary";
 import { useUserGroups } from "@/features/teams/use-user-groups";
 import { isPaymentOverdue } from "@/features/payments/use-payment-detail";
 import { useUnreadNotificationCount } from "@/features/notifications/use-notification-center";
@@ -30,7 +38,16 @@ function HomePage() {
     (typeof user?.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()) ||
     user?.email?.split("@")[0] ||
     "Player";
-  const { name, events, payments, adminActions, loading } = useHomeSummary(user?.id, fallbackName);
+  const {
+    name,
+    events,
+    payments,
+    adminActions,
+    onboardingChecklists,
+    loading,
+    dismissingClubId,
+    dismissOnboardingChecklist,
+  } = useHomeSummary(user?.id, fallbackName);
   const { clubs, loading: groupsLoading } = useUserGroups(user?.id);
   const { count: unreadNotifications } = useUnreadNotificationCount(user?.id);
 
@@ -46,6 +63,15 @@ function HomePage() {
   );
   const adminTeams = teams.filter((team) => team.isAdmin);
   const totalOwed = payments.reduce((sum, payment) => sum + payment.amount_cents, 0);
+
+  async function dismissChecklist(clubId: string) {
+    const { error } = await dismissOnboardingChecklist(clubId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Checklist dismissed");
+  }
 
   return (
     <div className="px-5 pb-6 pt-6">
@@ -88,6 +114,18 @@ function HomePage() {
 
       {adminTeams.length > 0 && (
         <section className="mt-7">
+          {onboardingChecklists.length > 0 && !loading && !groupsLoading && (
+            <div className="mb-5 space-y-3">
+              {onboardingChecklists.map((checklist) => (
+                <AdminOnboardingCard
+                  key={checklist.club_id}
+                  checklist={checklist}
+                  dismissing={dismissingClubId === checklist.club_id}
+                  onDismiss={() => dismissChecklist(checklist.club_id)}
+                />
+              ))}
+            </div>
+          )}
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-base font-bold tracking-tight">Command center</h2>
             <span className="text-xs font-semibold text-muted-foreground">
@@ -378,5 +416,145 @@ function HomePage() {
         </section>
       )}
     </div>
+  );
+}
+
+function AdminOnboardingCard({
+  checklist,
+  dismissing,
+  onDismiss,
+}: {
+  checklist: AdminOnboardingChecklist;
+  dismissing: boolean;
+  onDismiss: () => void;
+}) {
+  const percent = Math.round((checklist.completed_count / checklist.total_count) * 100);
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wide text-primary">Club setup</p>
+          <h2 className="mt-1 truncate text-base font-extrabold tracking-tight">
+            {checklist.club_name}
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {checklist.completed_count} of {checklist.total_count} complete
+          </p>
+        </div>
+        {checklist.complete && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            disabled={dismissing}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border text-muted-foreground disabled:opacity-60"
+            aria-label="Dismiss checklist"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary">
+        <div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
+      </div>
+      <ul className="mt-4 divide-y divide-border/70">
+        {checklist.items.map((item) => (
+          <li key={item.id} className="py-3 first:pt-0 last:pb-0">
+            <OnboardingItemLink item={item} checklist={checklist} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function OnboardingItemContent({ item }: { item: AdminOnboardingItem }) {
+  return (
+    <>
+      <div className="flex min-w-0 items-start gap-3">
+        <span
+          className={
+            "mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full " +
+            (item.complete ? "bg-primary/12 text-primary" : "bg-secondary text-muted-foreground")
+          }
+        >
+          {item.complete ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">{item.title}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{item.body}</p>
+        </div>
+      </div>
+      {!item.complete && (
+        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-primary">
+          Start
+          <ArrowRight className="h-3.5 w-3.5" />
+        </span>
+      )}
+    </>
+  );
+}
+
+function OnboardingItemLink({
+  item,
+  checklist,
+}: {
+  item: AdminOnboardingItem;
+  checklist: AdminOnboardingChecklist;
+}) {
+  const className = "flex items-center justify-between gap-3";
+
+  if (item.complete) {
+    return (
+      <div className={className}>
+        <OnboardingItemContent item={item} />
+      </div>
+    );
+  }
+
+  if (item.href === "calendar") {
+    return (
+      <Link to="/calendar" className={className}>
+        <OnboardingItemContent item={item} />
+      </Link>
+    );
+  }
+
+  if (item.href === "team" || !checklist.team_id) {
+    return (
+      <Link
+        to="/clubs/$clubId/teams/new"
+        params={{ clubId: checklist.club_id }}
+        className={className}
+      >
+        <OnboardingItemContent item={item} />
+      </Link>
+    );
+  }
+
+  if (item.href === "members") {
+    return (
+      <Link
+        to="/groups/$teamId/members"
+        params={{ teamId: checklist.team_id }}
+        className={className}
+      >
+        <OnboardingItemContent item={item} />
+      </Link>
+    );
+  }
+
+  if (item.href === "event") {
+    return (
+      <Link to="/events/new" search={{ teamId: checklist.team_id }} className={className}>
+        <OnboardingItemContent item={item} />
+      </Link>
+    );
+  }
+
+  return (
+    <Link to="/payments/new" search={{ teamId: checklist.team_id }} className={className}>
+      <OnboardingItemContent item={item} />
+    </Link>
   );
 }
