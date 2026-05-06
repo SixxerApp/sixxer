@@ -39,8 +39,9 @@ test("admin can create a targeted payment from a saved template and export statu
   expect((await download).suggestedFilename()).toMatch(/e2e-kit-fee-.*-payments\.csv/);
 
   await page.goto(`/payments/new?teamId=${teamId}`);
-  await expect(page.getByLabel("Template")).toContainText(title);
-  await page.getByLabel("Template").selectOption({ index: 1 });
+  const templateSelect = page.getByLabel("Template", { exact: true });
+  await expect(templateSelect).toContainText(title);
+  await templateSelect.selectOption({ index: 1 });
   await expect(page.getByLabel("Title")).toHaveValue(title);
   await expect(page.getByLabel("Category")).toHaveValue("kit");
   await expect(page.getByLabel("Amount")).toHaveValue("24.50");
